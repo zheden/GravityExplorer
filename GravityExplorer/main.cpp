@@ -35,6 +35,10 @@ void InitObjects()
    const GLuint textureId1 = loadTextureFromImage(img1);
    delete img1;
 
+   Image* img_ast = loadBMP("graphics//asteroid.bmp");
+   const GLuint textureId_ast = loadTextureFromImage(img_ast);
+   delete img_ast;
+
    gp_quadratic = gluNewQuadric();
    gluQuadricDrawStyle(gp_quadratic, GLU_FILL);
    gluQuadricTexture(gp_quadratic, GL_TRUE);
@@ -55,7 +59,7 @@ void InitObjects()
 
    const TVector moon_velo = TVector(-1, 0, 0);
    const TVector moon_pos = TVector(0, 270, 0);
-   Satellite moon(moon_velo, moon_pos, earth.m_mass / 100 /*g_aster_model.get()*/);
+   Satellite moon(moon_velo, moon_pos, earth.m_mass / 100, textureId_ast);
    satellites.push_back(moon);
 
    g_last_time = glfwGetTime();
@@ -304,6 +308,52 @@ void Reshape( GLFWwindow* window, int width, int height ) {
    //glutPostRedisplay();
 }
 
+void DrawSattelite( GLuint i_texID )
+{
+   glPushMatrix();
+   glScalef(2, 2, 2);
+   glBindTexture(GL_TEXTURE_2D, i_texID);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+   gluSphere(gp_quadratic, 10.0, 15, 15);
+   glBindTexture(GL_TEXTURE_2D, NULL);
+
+
+   glPushMatrix();
+   glTranslatef(4, 4, 4);
+   glBindTexture(GL_TEXTURE_2D, i_texID);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+   gluSphere(gp_quadratic, 9.0, 10, 10);
+   glBindTexture(GL_TEXTURE_2D, NULL);
+   glPopMatrix();
+
+   glPushMatrix();
+   glTranslatef(-5, 0, 5);
+   glBindTexture(GL_TEXTURE_2D, i_texID);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+   gluSphere(gp_quadratic, 6, 10, 10);
+   glBindTexture(GL_TEXTURE_2D, NULL);
+   glPopMatrix();
+
+   glPushMatrix();
+   glTranslatef(0, -5, -3);
+   glBindTexture(GL_TEXTURE_2D, i_texID);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+   gluSphere(gp_quadratic, 6, 10, 10);
+   glBindTexture(GL_TEXTURE_2D, NULL);
+   glPopMatrix();
+
+   glPopMatrix();
+
+}
+
 //////////////////////////////////////////////////////////////////////////
 void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &markers) 
 {
@@ -373,19 +423,17 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &m
       glScalef(g_scale_factor_for_draw, g_scale_factor_for_draw, g_scale_factor_for_draw);
 
       glPushMatrix();
-      glRotatef(360.0 * g_hour_of_day / g_num_hours_in_day, 1.0, 0.0, 0.0); // to make slower rotation
+      glRotatef(360.0 * g_hour_of_day / g_num_hours_in_day, 0.0, 0.0, 1.0); // to make slower rotation
       glScaled(planets[i].m_radius_scale, planets[i].m_radius_scale, planets[i].m_radius_scale);
       //glColor3f(0.2, 0.2, 1.0);
       //glutWireSphere(90, 15, 15);
 
 
       glBindTexture(GL_TEXTURE_2D, planets[i].m_texID);
-
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
       gluSphere(gp_quadratic, 100.0, 20, 20);
-
       glBindTexture(GL_TEXTURE_2D, NULL);
 
       glPopMatrix();
@@ -438,13 +486,9 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &m
          satellites[i].acceleration_vec.Z() * scale_for_draw);
       glEnd();
 
+      glColor3f(1, 1, 1);
 
-      glColor3f(1, 0.2, 1.0);
-      glutWireSphere(30, 20, 20);
-      //glDisable(GL_COLOR_MATERIAL);
-      //Lib3dsFile * p_file = satellites[i].m_3d_model_file;
-      //render_node(p_file->nodes, p_file);
-      //glEnable(GL_COLOR_MATERIAL);
+      DrawSattelite(satellites[i].m_texID);
    }
 
    // for debug: draw line betw 2 planets

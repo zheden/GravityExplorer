@@ -29,8 +29,8 @@ public:
 class Satellite: public SpaceObject
 {
 public:
-   Satellite(const TVector& i_velocity, const TVector& i_pos, double i_mass /*Lib3dsFile* ip_file*/) :
-      SpaceObject(i_pos, i_mass, NULL), m_velocity(i_velocity), acceleration_vec(0, 0, 0) {};
+   Satellite(const TVector& i_velocity, const TVector& i_pos, double i_mass, GLuint i_texID) :
+      SpaceObject(i_pos, i_mass, i_texID), m_velocity(i_velocity), acceleration_vec(0, 0, 0) {};
 
    TVector m_velocity;
    TVector acceleration_vec;

@@ -41,3 +41,6 @@ GravityExplorer/Release/*.*
 GravityExplorer/Debug/*.*
 
 GravityExplorer.opensdf
+*.sdf
+*.suo
+GravityExplorer.sdf
