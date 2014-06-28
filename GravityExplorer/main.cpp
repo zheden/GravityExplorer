@@ -51,15 +51,15 @@ void InitObjects()
 
    // earth
    const TVector earth_pos = TVector(0, 0, 0);
-   StaticPlanet earth(earth_pos, 500000000, textureId0, 0x005a);
+   StaticPlanet earth(earth_pos, 45, textureId0, 0x005a);
    planets.push_back(earth);
 
    // saturn
    const TVector saturn_pos = TVector(0, 0, 0);
-   StaticPlanet saturn(saturn_pos, 500000000, textureId1, 0x0b44);
+   StaticPlanet saturn(saturn_pos, 45, textureId1, 0x0b44);
    planets.push_back(saturn);
 
-   const TVector satell_velo = TVector(-1, 0, 0);
+   const TVector satell_velo = TVector(-0.02, 0, 0);
    const TVector satell_pos = TVector(0, 0, 0);
    Satellite satell(satell_velo, satell_pos, earth.m_mass / 100, textureId_ast, 0x1228);
    satellites.push_back(satell);
@@ -213,27 +213,25 @@ void UpdateState()
          if ( !planets[pi].m_is_on_scene)
             continue;
 
-         CMatrix mat_to("mat1", 4, 4);
-         mat_to.SetData(planets[pi].m_resultMatrix);
-         CMatrix mat_from("mat1", 4, 4);
-         mat_from.SetData(satellites[si].m_resultMatrix);
+         CMatrix mat_from("mat_from", 4, 4);
+         mat_from.SetData(planets[pi].m_resultMatrix);
+         CMatrix mat_to("mat_to", 4, 4);
+         mat_to.SetData(satellites[si].m_resultMatrix);
 
-         TVector distance_vec = GetPointInAnotherCoorSys(TVector(0, 0, 0), mat_to, mat_from); // point is dist because planet is in zero
-         distance_vec *= 1/g_scale_factor_for_draw; ///? 
+         TVector distance_vec_sat_planet = GetPointInAnotherCoorSys(TVector(0, 0, 0), mat_from, mat_to); // point is dist because planet is in zero
+         distance_vec_sat_planet -= satellites[si].m_pos;
 
-         distance_vec -= satellites[si].m_pos;
+         distance_vec_draw = distance_vec_sat_planet; // only for debug
 
-         distance_vec_draw = distance_vec; // only for debug
+         const double dist_sat_planet = distance_vec_sat_planet.length();
+         const TVector gravity_direction = distance_vec_sat_planet.normalize();
 
-         const double dist_moon_earth = distance_vec.length();
-         const TVector gravity_direction = distance_vec.normalize();
-
-         // ma = M*m*G/r^2 ///? o o not correct
-         const double acceleration_scal = G * planets[pi].m_mass / (dist_moon_earth * dist_moon_earth);
+         // ma = M*m*G/r^2
+         const double acceleration_scal = G * planets[pi].m_mass / (dist_sat_planet * dist_sat_planet);
 
          acceleration_vec += gravity_direction * acceleration_scal;
       }
-      ///? not to update anything
+
       satellites[si].m_acceleration_vec = acceleration_vec;
       // calculate position of moon according to its velocity and position of earth
       satellites[si].m_velocity += acceleration_vec * time_interval;
@@ -317,9 +315,12 @@ void Reshape( GLFWwindow* window, int width, int height ) {
    //glutPostRedisplay();
 }
 
-void DrawSattelite( GLuint i_texID )
+void DrawSattelite(uint index)
 {
+   GLuint i_texID = satellites[index].m_texID;
    glPushMatrix();
+   glColor3f(1, 1, 1);
+   glScalef(0.0003, 0.0003, 0.0003); // scale just drawing of planet
    glScalef(2, 2, 2);
    glBindTexture(GL_TEXTURE_2D, i_texID);
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -363,15 +364,25 @@ void DrawSattelite( GLuint i_texID )
 }
 
 //////////////////////////////////////////////////////////////////////////
-void multMatrix(float mat[16], float vec[4])
+void DrawPlanet(uint index)
 {
-   for(int i=0; i<4; i++)
-   {
-      g_snowmanLookVector[i] = 0;
-      for(int j=0; j<4; j++)
-         g_snowmanLookVector[i] += mat[4*i + j] * vec[j];
-   }
+   glPushMatrix();
+   glRotatef(360.0 * g_hour_of_day / g_num_hours_in_day, 0.0, 0.0, 1.0); // to make slower rotation
+   glScaled(planets[index].m_radius_scale, planets[index].m_radius_scale, planets[index].m_radius_scale);
+
+   //glColor3f(0.2, 0.2, 1.0);
+   //glutWireSphere(40, 15, 15);
+
+   glBindTexture(GL_TEXTURE_2D, planets[index].m_texID);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+   glColor3f(1, 1, 1);
+   gluSphere(gp_quadratic, 0.03, 20, 20);
+   glBindTexture(GL_TEXTURE_2D, NULL);
+
+   glPopMatrix();
 }
+
 
 //////////////////////////////////////////////////////////////////////////
 void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &markers) 
@@ -452,24 +463,8 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &m
 
       glLoadMatrixf( resultTransposedMatrix );
 
-      glScalef(g_scale_factor_for_draw, g_scale_factor_for_draw, g_scale_factor_for_draw);
+      DrawPlanet(i);
 
-      glPushMatrix();
-      glRotatef(360.0 * g_hour_of_day / g_num_hours_in_day, 0.0, 0.0, 1.0); // to make slower rotation
-      glScaled(planets[i].m_radius_scale, planets[i].m_radius_scale, planets[i].m_radius_scale);
-
-      //glColor3f(0.2, 0.2, 1.0);
-      //glutWireSphere(40, 15, 15);
-
-      glBindTexture(GL_TEXTURE_2D, planets[i].m_texID);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-      glColor3f(1, 1, 1);
-      gluSphere(gp_quadratic, 100.0, 20, 20);
-      glBindTexture(GL_TEXTURE_2D, NULL);
-
-      glPopMatrix();
    }
 
    for (uint i = 0; i < satellites.size(); ++i)
@@ -485,11 +480,9 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &m
 
       glLoadMatrixf( resultTransposedMatrix );
 
-      glScalef(g_scale_factor_for_draw, g_scale_factor_for_draw, g_scale_factor_for_draw);
       glTranslatef(satellites[i].m_pos.X(), satellites[i].m_pos.Y(), satellites[i].m_pos.Z());
-      glColor3f(1, 1, 1);
-      
-      DrawSattelite(satellites[i].m_texID);
+
+      DrawSattelite(i);
 
       // draw vec betw planet and sat
          //glBegin(GL_LINES);
