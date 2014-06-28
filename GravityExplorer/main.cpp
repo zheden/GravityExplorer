@@ -47,6 +47,8 @@ void InitObjects()
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+   glBindTexture(GL_TEXTURE_2D, NULL);
+
    // earth
    const TVector earth_pos = TVector(0, 0, 0);
    StaticPlanet earth(earth_pos, 500000000, textureId0, 0x005a);
@@ -57,10 +59,10 @@ void InitObjects()
    StaticPlanet saturn(saturn_pos, 500000000, textureId1, 0x0b44);
    planets.push_back(saturn);
 
-   const TVector moon_velo = TVector(-1, 0, 0);
-   const TVector moon_pos = TVector(0, 270, 0);
-   Satellite moon(moon_velo, moon_pos, earth.m_mass / 100, textureId_ast);
-   satellites.push_back(moon);
+   const TVector satell_velo = TVector(-1, 0, 0);
+   const TVector satell_pos = TVector(0, 270, 0);
+   Satellite satell(satell_velo, satell_pos, earth.m_mass / 100, textureId_ast, 0x1228);
+   satellites.push_back(satell);
 
    g_last_time = glfwGetTime();
 }
@@ -166,6 +168,33 @@ void OnKeyPressed(GLFWwindow* window, int i_key, int scancode, int i_action, int
 }
 
 //////////////////////////////////////////////////////////////////////////
+TVector GetPointInAnotherCoorSys(const TVector& i_point_from, const CMatrix& mat_from/*float i_mat_from[16]*/, const CMatrix& mat_to/*float i_mat_to[16]*/)
+{
+   //CMatrix mat_to("mat1", 4, 4);
+   //mat_to.SetData(i_mat_to);
+   CMatrix mat_to_inv = mat_to.Inverse();
+
+   //CMatrix mat_from("mat1", 4, 4);
+   //mat_from.SetData(i_mat_from);
+   CMatrix T = mat_to_inv * mat_from;
+
+   CMatrix point_from("cent", 4, 1);
+   point_from.m_pData[0][0] = i_point_from.X();
+   point_from.m_pData[1][0] = i_point_from.Y();
+   point_from.m_pData[2][0] = i_point_from.Z();
+   point_from.m_pData[3][0] = 1;
+
+   CMatrix point_to = T * point_from;
+   const double homo_coordinate = 1; ///? point_to.m_pData[3][0];
+
+   const double x = point_to.m_pData[0][0] / homo_coordinate;
+   const double y = point_to.m_pData[1][0] / homo_coordinate;
+   const double z = point_to.m_pData[2][0] / homo_coordinate;
+
+   return TVector(x, y, z);
+}
+
+//////////////////////////////////////////////////////////////////////////
 void UpdateState()
 {
    double time = glfwGetTime();
@@ -176,10 +205,10 @@ void UpdateState()
    if (!g_is_spin_mode)
       return; // nothing to update
 
-   for (int si = 0; si < satellites.size(); ++si)
+   for (uint si = 0; si < satellites.size(); ++si)
    {
       TVector acceleration_vec(0, 0, 0);
-      for (int pi = 0; pi < planets.size(); ++pi)
+      for (uint pi = 0; pi < planets.size(); ++pi)
       {
          if ( !planets[pi].m_is_on_scene)
             continue;
@@ -191,37 +220,25 @@ void UpdateState()
          }
          else
          {
+            const TVector center = TVector(0, 0, 0);
+
             CMatrix mat_to("mat1", 4, 4);
             mat_to.SetData(planets[0].m_resultMatrix);
-            CMatrix mat_to_inv = mat_to.Inverse();
-
             CMatrix mat_from("mat1", 4, 4);
             mat_from.SetData(planets[pi].m_resultMatrix);
-            CMatrix T = mat_to_inv * mat_from;
 
-            CMatrix center("cent", 4, 1);
-            center.m_pData[0][0] = 0;
-            center.m_pData[1][0] = 0;
-            center.m_pData[2][0] = 0;
-            center.m_pData[3][0] = 1;
-
-            CMatrix res = T * center;
-
-            distance_vec = TVector(res.m_pData[0][0], res.m_pData[1][0], res.m_pData[2][0]);
-            distance_vec *= 1/g_scale_factor_for_draw;
+            distance_vec = GetPointInAnotherCoorSys(center, mat_from, mat_to); // point is dist because planet is in zero
+            distance_vec *= 1/g_scale_factor_for_draw; ///? 
 
             distance_vec -= satellites[si].m_pos;
 
-            distance_vec_draw = distance_vec;
-
-
+            distance_vec_draw = distance_vec; // only for debug
          }
          const double dist_moon_earth = distance_vec.length();
          const TVector gravity_direction = distance_vec.normalize();
 
          // ma = M*m*G/r^2 ///? o o not correct
          const double acceleration_scal = G * planets[pi].m_mass / (dist_moon_earth * dist_moon_earth);
-         // * g_scale_factor only distances are huge, velocity and acceleration are small ///? change this, make numbers as in real life
 
          acceleration_vec += gravity_direction * acceleration_scal;
       }
@@ -388,57 +405,71 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &m
       return;
 
 
-   for (int k = 0; k < planets.size(); ++k)
+   for (uint k = 0; k < planets.size(); ++k)
       planets[k].m_is_on_scene = false;
+   for (uint k = 0; k < satellites.size(); ++k)
+      satellites[k].m_is_on_scene = false;
 
-   for(int i=0; i<markers.size(); i++)
+   for(uint i=0; i<markers.size(); i++)
    {
       const int code = markers[i].code;
-      for (int k = 0; k < planets.size(); ++k)
+      bool marker_i_found = false;
+      for (uint k = 0; k < planets.size() && !marker_i_found; ++k)
       {
          if(code == planets[k].m_code)
          {
             planets[k].m_is_on_scene = true;
             for(int j=0; j<16; j++)
                planets[k].m_resultMatrix[j] = markers[i].resultMatrix[j];
+            marker_i_found = true;
+         }
+      }
+
+      for (uint k = 0; k < satellites.size() && !marker_i_found; ++k)
+      {
+         if(code == satellites[k].m_code)
+         {
+            satellites[k].m_is_on_scene = true;
+            for(int j=0; j<16; j++)
+               satellites[k].m_resultMatrix[j] = markers[i].resultMatrix[j];
+            marker_i_found = true;
          }
       }
    }
 
 
-   for (int i = 0; i < planets.size(); ++i)
+   for (uint i = 0; i < planets.size(); ++i)
    {
       if (!planets[i].m_is_on_scene)
          continue;
 
-      //glPushMatrix();
       float resultTransposedMatrix[16];
       for (int x=0; x<4; ++x)
          for (int y=0; y<4; ++y)
             resultTransposedMatrix[x*4+y] = planets[i].m_resultMatrix[y*4+x];
 
       glLoadMatrixf( resultTransposedMatrix );
-      //glRotatef( -90, 1, 0, 0 );
 
       glScalef(g_scale_factor_for_draw, g_scale_factor_for_draw, g_scale_factor_for_draw);
 
       glPushMatrix();
       glRotatef(360.0 * g_hour_of_day / g_num_hours_in_day, 0.0, 0.0, 1.0); // to make slower rotation
       glScaled(planets[i].m_radius_scale, planets[i].m_radius_scale, planets[i].m_radius_scale);
-      //glColor3f(0.2, 0.2, 1.0);
-      //glutWireSphere(90, 15, 15);
 
+      //glColor3f(0.2, 0.2, 1.0);
+      //glutWireSphere(40, 15, 15);
 
       glBindTexture(GL_TEXTURE_2D, planets[i].m_texID);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+      glColor3f(1, 1, 1);
       gluSphere(gp_quadratic, 100.0, 20, 20);
       glBindTexture(GL_TEXTURE_2D, NULL);
 
       glPopMatrix();
 
-
+      // draw line betw planet and sattelite
       //if (i == 0)
       //{
       //   glTranslatef(satellites[0].m_pos.X(), satellites[0].m_pos.Y(), satellites[0].m_pos.Z());
@@ -449,24 +480,35 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &m
       //}
    }
 
-   for (int i = 0; i < satellites.size(); ++i)
+   for (uint i = 0; i < satellites.size(); ++i)
    {
-      if (!planets[0].m_is_on_scene)
+      TVector pos_sat_in_its_coor_sys;
+      if (!satellites[i].m_is_on_scene)
          break;
-      //same transform as first planet
+
       float resultTransposedMatrix[16];
-      for (int x=0; x<4; ++x)
-         for (int y=0; y<4; ++y)
-            resultTransposedMatrix[x*4+y] = planets[0].m_resultMatrix[y*4+x];
+      for (int x = 0; x < 4; ++x)
+         for (int y = 0; y < 4; ++y)
+            resultTransposedMatrix[x*4+y] = satellites[i].m_resultMatrix[y*4+x];
 
       glLoadMatrixf( resultTransposedMatrix );
-      //glRotatef( -90, 1, 0, 0 );
-      glScalef(0.0003, 0.0003, 0.0003);
+      glScalef(g_scale_factor_for_draw, g_scale_factor_for_draw, g_scale_factor_for_draw);
 
-      // day_of_year determine rotation around the earth
-      //glRotatef(360.0 * g_day_of_month / 30.0, 0.0, 1.0, 0.0);
-      glTranslatef(satellites[i].m_pos.X(), satellites[i].m_pos.Y(), satellites[i].m_pos.Z());
+      CMatrix mat_to("mat1", 4, 4);
+      mat_to.SetData(satellites[i].m_resultMatrix);
+      CMatrix mat_from("mat1", 4, 4);
+      mat_from.SetData(planets[0].m_resultMatrix);
 
+      pos_sat_in_its_coor_sys = GetPointInAnotherCoorSys(satellites[i].m_pos * g_scale_factor_for_draw, mat_from, mat_to);
+      pos_sat_in_its_coor_sys *= 1/g_scale_factor_for_draw;
+      glTranslatef(pos_sat_in_its_coor_sys.X(), pos_sat_in_its_coor_sys.Y(), pos_sat_in_its_coor_sys.Z());
+
+      glColor3f(1, 1, 1);
+      DrawSattelite(satellites[i].m_texID);
+
+      //////////////////////////////////////////////////////////////////////////
+      // work only in one orientation of satellite marker.
+      // Draw velo and acc vectors
       glEnable(GL_COLOR_MATERIAL);
       glColor3f(0, 0, 1);
       glBegin(GL_LINES);
@@ -485,27 +527,36 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &m
          satellites[i].acceleration_vec.Y() * scale_for_draw, 
          satellites[i].acceleration_vec.Z() * scale_for_draw);
       glEnd();
+      //////////////////////////////////////////////////////////////////////////
 
-      glColor3f(1, 1, 1);
+      //glTranslatef(satellites[i].m_resultMatrix[3], satellites[i].m_resultMatrix[7], satellites[i].m_resultMatrix[11]);
+      //glColor3f(0, 1, 0);
+      //glRotatef(90, 1, 0, 0);
+      //gluCylinder(gp_quadratic, 0.01, 0, 0.03, 15, 15);
 
-      DrawSattelite(satellites[i].m_texID);
+      // FOR DEBUG: draw segment betw satel zero and planet zero
+      const TVector point1(planets[0].m_resultMatrix[3], planets[0].m_resultMatrix[7], planets[0].m_resultMatrix[11]);
+      const TVector point2(satellites[i].m_resultMatrix[3], satellites[i].m_resultMatrix[7], satellites[i].m_resultMatrix[11]);
+      glLoadIdentity();
+      glEnable(GL_COLOR_MATERIAL);
+      glColor3f(1, 0, 0);
+      glBegin(GL_LINES);
+      glVertex3f(point1.X(), point1.Y(), point1.Z());
+      glVertex3f(point2.X(), point2.Y(), point2.Z()); // sat
+      glEnd();
+
+      //TVector dir = point2 - point1;
+      //TVector normal;
+      //TVector::cross(dir, TVector(1, 0, 0), normal);
+      //glLoadIdentity();
+      //gluLookAt(
+      //   point1.X(), point1.Y(), point1.Z(), // plan. to center
+      //   point2.X(), point2.Y(), point2.Z(), // sat. From eye
+      //   normal.X(), normal.Y(), normal.Z());
+
+      //glRotatef(90, 1, 0, 0);
+      //gluCylinder(gp_quadratic, 0.01, 0, 3, 15, 15);
    }
-
-   // for debug: draw line betw 2 planets
-   //bool show_dist = false;
-
-   //glLoadIdentity();
-   //glTranslatef(planets[0].m_resultMatrix[3], planets[0].m_resultMatrix[7], planets[0].m_resultMatrix[11]);
-   //if (show_dist && planets.size() == 2)
-   //{
-   //   //glEnable(GL_COLOR_MATERIAL);
-   //   glColor3f(1, 1, 1);
-   //   glBegin(GL_LINES);
-   //   //glVertex3f(planets[0].m_resultMatrix[3], planets[0].m_resultMatrix[7], planets[0].m_resultMatrix[11]);
-   //   glVertex3f(0,0,0);
-   //   glVertex3f(planets[1].m_resultMatrix[3]*100, planets[1].m_resultMatrix[7]*100, planets[1].m_resultMatrix[11]*100);
-   //   glEnd();
-   //}
 }
 
 //////////////////////////////////////////////////////////////////////////

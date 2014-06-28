@@ -113,7 +113,7 @@ public:
         std::cout << "\n";
     }   
  
-    double Determinant()
+    double Determinant() const
     {
         double det = 0;
         double **pd = m_pData;
@@ -296,7 +296,7 @@ public:
         return *this;
     }
  
-    CMatrix CoFactor()
+    CMatrix CoFactor() const
     {
         CMatrix cofactor("COF", m_rows, m_cols);
         if(m_rows != m_cols)
@@ -409,7 +409,7 @@ public:
         return trans;
     }
  
-    CMatrix Inverse()
+    CMatrix Inverse() const
     {
         CMatrix cofactor("COF", m_rows, m_cols);
         CMatrix inv("INV", m_rows, m_cols);

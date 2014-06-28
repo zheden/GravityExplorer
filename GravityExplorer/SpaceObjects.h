@@ -4,12 +4,17 @@
 class SpaceObject
 {
 public:
-   SpaceObject(const TVector& i_pos, double i_mass, GLuint i_texID):
-      m_pos(i_pos), m_mass(i_mass), m_texID(i_texID) {};
+   SpaceObject(const TVector& i_pos, double i_mass, GLuint i_texID, int i_code):
+      m_pos(i_pos), m_mass(i_mass), m_texID(i_texID), m_code(i_code), m_is_on_scene(false) {};
 
    TVector m_pos;
    double m_mass;
    GLuint m_texID;
+
+   // marker
+   bool m_is_on_scene;
+   int m_code;
+   float m_resultMatrix[16];
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -17,20 +22,17 @@ class StaticPlanet : public SpaceObject
 {
 public:
    StaticPlanet(const TVector& i_pos, double i_mass, GLuint i_texID, int i_code) :
-      SpaceObject(i_pos, i_mass, i_texID), m_radius_scale(1), m_code(i_code), m_is_on_scene(false) {};
+      SpaceObject(i_pos, i_mass, i_texID, i_code), m_radius_scale(1){};
 
    double m_radius_scale;
-   bool m_is_on_scene;
-   int m_code; // marker code
-   float m_resultMatrix[16];
 };
 
 //////////////////////////////////////////////////////////////////////////
 class Satellite: public SpaceObject
 {
 public:
-   Satellite(const TVector& i_velocity, const TVector& i_pos, double i_mass, GLuint i_texID) :
-      SpaceObject(i_pos, i_mass, i_texID), m_velocity(i_velocity), acceleration_vec(0, 0, 0) {};
+   Satellite(const TVector& i_velocity, const TVector& i_pos, double i_mass, GLuint i_texID, int i_code) :
+      SpaceObject(i_pos, i_mass, i_texID, i_code), m_velocity(i_velocity), acceleration_vec(0, 0, 0) {};
 
    TVector m_velocity;
    TVector acceleration_vec;

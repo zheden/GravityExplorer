@@ -1,5 +1,7 @@
 #pragma  once;
 
+typedef unsigned int uint;
+
 class StaticPlanet;
 class Satellite;
 
@@ -10,7 +12,7 @@ const int g_camera_height = 480;
 const int g_virtual_camera_angle = 60;
 unsigned char bkgnd[g_camera_width*g_camera_height*3];
 
-GLenum g_is_spin_mode = GL_TRUE;
+GLenum g_is_spin_mode = GL_FALSE;
 double g_hour_of_day = 0.0;
 double g_num_hours_in_day = 3400.0; // to make slower rotatoin of planet
 double g_animate_increment = 16;  // Time step for animation (hours)
@@ -25,3 +27,5 @@ std::vector<Satellite> satellites;
 std::vector<StaticPlanet> planets;
 
 GLUquadricObj * gp_quadratic; // storage for quadric objects
+
+float g_snowmanLookVector[4];
