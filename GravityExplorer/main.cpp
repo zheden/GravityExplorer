@@ -328,7 +328,6 @@ void DrawSatellite(uint index)
    gluSphere(gp_quadratic, 10.0, 15, 15);
    glBindTexture(GL_TEXTURE_2D, NULL);
 
-
    glPushMatrix();
    glTranslatef(4, 4, 4);
    glBindTexture(GL_TEXTURE_2D, i_texID);
@@ -382,6 +381,59 @@ void DrawPlanet(uint index)
    glPopMatrix();
 }
 
+#define RADPERDEG 0.0174533
+
+void DrawArrow(GLdouble x1,GLdouble y1,GLdouble z1,GLdouble x2,GLdouble y2,GLdouble z2,GLdouble D)
+{
+   double x=x2-x1;
+   double y=y2-y1;
+   double z=z2-z1;
+   double L=sqrt(x*x+y*y+z*z);
+
+   GLUquadricObj *quadObj;
+
+   glPushMatrix ();
+
+   glTranslated(x1,y1,z1);
+
+   if((x!=0.)||(y!=0.)) {
+      glRotated(atan2(y,x)/RADPERDEG,0.,0.,1.);
+      glRotated(atan2(sqrt(x*x+y*y),z)/RADPERDEG,0.,1.,0.);
+   } else if (z<0){
+      glRotated(180,1.,0.,0.);
+   }
+
+   glTranslatef(0,0,L-4*D);
+
+   quadObj = gluNewQuadric ();
+   gluQuadricDrawStyle (quadObj, GLU_FILL);
+   gluQuadricNormals (quadObj, GLU_SMOOTH);
+   gluCylinder(quadObj, 2*D, 0.0, 4*D, 32, 1);
+   gluDeleteQuadric(quadObj);
+
+   quadObj = gluNewQuadric ();
+   gluQuadricDrawStyle (quadObj, GLU_FILL);
+   gluQuadricNormals (quadObj, GLU_SMOOTH);
+   gluDisk(quadObj, 0.0, 2*D, 32, 1);
+   gluDeleteQuadric(quadObj);
+
+   glTranslatef(0,0,-L+4*D);
+
+   quadObj = gluNewQuadric ();
+   gluQuadricDrawStyle (quadObj, GLU_FILL);
+   gluQuadricNormals (quadObj, GLU_SMOOTH);
+   gluCylinder(quadObj, D, D, L-4*D, 32, 1);
+   gluDeleteQuadric(quadObj);
+
+   quadObj = gluNewQuadric ();
+   gluQuadricDrawStyle (quadObj, GLU_FILL);
+   gluQuadricNormals (quadObj, GLU_SMOOTH);
+   gluDisk(quadObj, 0.0, D, 32, 1);
+   gluDeleteQuadric(quadObj);
+
+   glPopMatrix ();
+
+}
 
 //////////////////////////////////////////////////////////////////////////
 void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &markers) 
@@ -489,27 +541,17 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &m
          //glVertex3f(distance_vec_draw.X(), distance_vec_draw.Y(), distance_vec_draw.Z());
          //glEnd();
 
-      //////////////////////////////////////////////////////////////////////////
-      // work only in one orientation of satellite marker.
+
       // Draw velo and acc vectors
-      glEnable(GL_COLOR_MATERIAL);
+      const double scale_for_velo_draw = 2;
+      const TVector velo_arrow_vec = satellites[i].m_velocity * scale_for_velo_draw;
       glColor3f(0, 0, 1);
-      glBegin(GL_LINES);
-      glVertex3f(0, 0, 0);
-      glVertex3f(satellites[i].m_velocity.X() * 100, 
-         satellites[i].m_velocity.Y() * 100, 
-         satellites[i].m_velocity.Z() * 100);
-      glEnd();
+      DrawArrow(0, 0, 0, velo_arrow_vec.X(), velo_arrow_vec.Y(), velo_arrow_vec.Z(), 0.001);
 
-      glEnable(GL_COLOR_MATERIAL);
+      const double scale_for_acc_draw = 4;
+      const TVector acc_arrow_vec = satellites[i].m_acceleration_vec * scale_for_acc_draw;
       glColor3f(1, 0, 0);
-      glBegin(GL_LINES);
-      glVertex3f(0, 0, 0);
-      glVertex3f(satellites[i].m_acceleration_vec.X() * 10000, 
-         satellites[i].m_acceleration_vec.Y() * 10000, 
-         satellites[i].m_acceleration_vec.Z() * 10000);
-      glEnd();
-
+      DrawArrow(0, 0, 0, acc_arrow_vec.X(), acc_arrow_vec.Y(), acc_arrow_vec.Z(), 0.001);
    }
 }
 
