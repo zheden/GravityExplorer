@@ -442,7 +442,7 @@ void MarkerTracker::findMarker( cv::Mat &img_bgr, std::vector<Marker> &markers )
             }
          }
 
-         printf ("Found: %04x\n", code);
+         //printf ("Found: %04x\n", code);
 
          if ( isFirstMarker )
          {

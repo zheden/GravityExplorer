@@ -9,6 +9,8 @@
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
 
+#include <iostream>
+
 #include "ImgLoader.h"
 #include "PoseEstimation.h"
 #include "MarkerTracker.h"
@@ -17,8 +19,7 @@
 
 #include "globals.h"
 #include "SpaceObjects.h"
-
-#include <iostream>
+#include "ParticleManager.h"
 
 void InitTextures()
 {
@@ -71,6 +72,14 @@ void InitObjects()
    g_last_time = glfwGetTime();
 }
 
+
+void explosionFX(float x, float y, float z)
+{
+	float* pos = new float[3];
+	pos[0] = x; pos[1] = y; pos[2] = z;
+	createParticles(pos);
+}
+
 //////////////////////////////////////////////////////////////////////////
 void OnKeyPressed(GLFWwindow* window, int i_key, int scancode, int i_action, int mods)
 {
@@ -81,6 +90,9 @@ void OnKeyPressed(GLFWwindow* window, int i_key, int scancode, int i_action, int
 
    switch (i_key)
    {
+   case GLFW_KEY_E:
+	   particlesCreatePending = true;
+	   break;
    case GLFW_KEY_SPACE:
       g_is_spin_mode = !g_is_spin_mode;
       break;
@@ -240,6 +252,8 @@ void UpdateState()
    // needed for rotation of planet around its axis
    g_hour_of_day += g_animate_increment;
    g_hour_of_day = g_hour_of_day - ((int)(g_hour_of_day/g_num_hours_in_day))*g_num_hours_in_day;
+
+   updateParticles(time_interval);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -250,7 +264,7 @@ void initVideoStream( cv::VideoCapture &cap ) {
    cap.open(0); // open the default camera
    if ( cap.isOpened()==false ) {
       std::cout << "No webcam found, using a video file" << std::endl;
-      cap.open("MarkerMovie.mpg");
+      //cap.open("MarkerMovie.mpg");
       if ( cap.isOpened()==false ) {
          std::cout << "No video file found. Exiting."      << std::endl;
          exit(0);
@@ -516,6 +530,24 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &m
 
       DrawPlanet(i);
 
+
+	  
+	  if (particlesCreatePending)
+	  {
+		  particlesCreatePending = false;
+		  //glPushMatrix();
+		  explosionFX(0.05, 0.0, 0.0);
+		  //glPopMatrix();
+	  }
+	  if (particles.size() > 0)
+	  {
+		  //glPushMatrix();
+		  drawParticles();
+		  //glColor3f(1, 1, 0);
+		  //glutSolidSphere(40.0, 20, 20);
+		  //glPopMatrix();
+	  }
+
    }
 
    for (uint i = 0; i < satellites.size(); ++i)
@@ -530,7 +562,7 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &m
             resultTransposedMatrix[x*4+y] = satellites[i].m_resultMatrix[y*4+x];
 
       glLoadMatrixf( resultTransposedMatrix );
-
+	  
       glTranslatef(satellites[i].m_pos.X(), satellites[i].m_pos.Y(), satellites[i].m_pos.Z());
 
       DrawSatellite(i);
