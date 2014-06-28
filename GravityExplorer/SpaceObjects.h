@@ -32,10 +32,10 @@ class Satellite: public SpaceObject
 {
 public:
    Satellite(const TVector& i_velocity, const TVector& i_pos, double i_mass, GLuint i_texID, int i_code) :
-      SpaceObject(i_pos, i_mass, i_texID, i_code), m_velocity(i_velocity), acceleration_vec(0, 0, 0) {};
+      SpaceObject(i_pos, i_mass, i_texID, i_code), m_velocity(i_velocity), m_acceleration_vec(0, 0, 0) {};
 
    TVector m_velocity;
-   TVector acceleration_vec;
+   TVector m_acceleration_vec;
 };
 
 

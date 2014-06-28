@@ -60,7 +60,7 @@ void InitObjects()
    planets.push_back(saturn);
 
    const TVector satell_velo = TVector(-1, 0, 0);
-   const TVector satell_pos = TVector(0, 270, 0);
+   const TVector satell_pos = TVector(0, 0, 0);
    Satellite satell(satell_velo, satell_pos, earth.m_mass / 100, textureId_ast, 0x1228);
    satellites.push_back(satell);
 
@@ -213,27 +213,18 @@ void UpdateState()
          if ( !planets[pi].m_is_on_scene)
             continue;
 
-         TVector distance_vec; ///? remove from global
-         if (pi == 0) ///? bbee everything is connected to coor sys 0. change!!
-         {
-            distance_vec = planets[pi].m_pos - satellites[si].m_pos;
-         }
-         else
-         {
-            const TVector center = TVector(0, 0, 0);
+         CMatrix mat_to("mat1", 4, 4);
+         mat_to.SetData(planets[pi].m_resultMatrix);
+         CMatrix mat_from("mat1", 4, 4);
+         mat_from.SetData(satellites[si].m_resultMatrix);
 
-            CMatrix mat_to("mat1", 4, 4);
-            mat_to.SetData(planets[0].m_resultMatrix);
-            CMatrix mat_from("mat1", 4, 4);
-            mat_from.SetData(planets[pi].m_resultMatrix);
+         TVector distance_vec = GetPointInAnotherCoorSys(TVector(0, 0, 0), mat_to, mat_from); // point is dist because planet is in zero
+         distance_vec *= 1/g_scale_factor_for_draw; ///? 
 
-            distance_vec = GetPointInAnotherCoorSys(center, mat_from, mat_to); // point is dist because planet is in zero
-            distance_vec *= 1/g_scale_factor_for_draw; ///? 
+         distance_vec -= satellites[si].m_pos;
 
-            distance_vec -= satellites[si].m_pos;
+         distance_vec_draw = distance_vec; // only for debug
 
-            distance_vec_draw = distance_vec; // only for debug
-         }
          const double dist_moon_earth = distance_vec.length();
          const TVector gravity_direction = distance_vec.normalize();
 
@@ -242,7 +233,8 @@ void UpdateState()
 
          acceleration_vec += gravity_direction * acceleration_scal;
       }
-      satellites[si].acceleration_vec = acceleration_vec;
+      ///? not to update anything
+      satellites[si].m_acceleration_vec = acceleration_vec;
       // calculate position of moon according to its velocity and position of earth
       satellites[si].m_velocity += acceleration_vec * time_interval;
       satellites[si].m_pos += satellites[si].m_velocity * time_interval;
@@ -368,7 +360,17 @@ void DrawSattelite( GLuint i_texID )
    glPopMatrix();
 
    glPopMatrix();
+}
 
+//////////////////////////////////////////////////////////////////////////
+void multMatrix(float mat[16], float vec[4])
+{
+   for(int i=0; i<4; i++)
+   {
+      g_snowmanLookVector[i] = 0;
+      for(int j=0; j<4; j++)
+         g_snowmanLookVector[i] += mat[4*i + j] * vec[j];
+   }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -468,16 +470,6 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &m
       glBindTexture(GL_TEXTURE_2D, NULL);
 
       glPopMatrix();
-
-      // draw line betw planet and sattelite
-      //if (i == 0)
-      //{
-      //   glTranslatef(satellites[0].m_pos.X(), satellites[0].m_pos.Y(), satellites[0].m_pos.Z());
-      //   glBegin(GL_LINES);
-      //   glVertex3f(0, 0, 0);
-      //   glVertex3f(distance_vec_draw.X(), distance_vec_draw.Y(), distance_vec_draw.Z());
-      //   glEnd();
-      //}
    }
 
    for (uint i = 0; i < satellites.size(); ++i)
@@ -492,19 +484,18 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &m
             resultTransposedMatrix[x*4+y] = satellites[i].m_resultMatrix[y*4+x];
 
       glLoadMatrixf( resultTransposedMatrix );
+
       glScalef(g_scale_factor_for_draw, g_scale_factor_for_draw, g_scale_factor_for_draw);
-
-      CMatrix mat_to("mat1", 4, 4);
-      mat_to.SetData(satellites[i].m_resultMatrix);
-      CMatrix mat_from("mat1", 4, 4);
-      mat_from.SetData(planets[0].m_resultMatrix);
-
-      pos_sat_in_its_coor_sys = GetPointInAnotherCoorSys(satellites[i].m_pos * g_scale_factor_for_draw, mat_from, mat_to);
-      pos_sat_in_its_coor_sys *= 1/g_scale_factor_for_draw;
-      glTranslatef(pos_sat_in_its_coor_sys.X(), pos_sat_in_its_coor_sys.Y(), pos_sat_in_its_coor_sys.Z());
-
+      glTranslatef(satellites[i].m_pos.X(), satellites[i].m_pos.Y(), satellites[i].m_pos.Z());
       glColor3f(1, 1, 1);
+      
       DrawSattelite(satellites[i].m_texID);
+
+      // draw vec betw planet and sat
+         //glBegin(GL_LINES);
+         //glVertex3f(0, 0, 0);
+         //glVertex3f(distance_vec_draw.X(), distance_vec_draw.Y(), distance_vec_draw.Z());
+         //glEnd();
 
       //////////////////////////////////////////////////////////////////////////
       // work only in one orientation of satellite marker.
@@ -518,44 +509,15 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &m
          satellites[i].m_velocity.Z() * 100);
       glEnd();
 
-      const int scale_for_draw = 10000;
       glEnable(GL_COLOR_MATERIAL);
       glColor3f(1, 0, 0);
       glBegin(GL_LINES);
       glVertex3f(0, 0, 0);
-      glVertex3f(satellites[i].acceleration_vec.X() * scale_for_draw, 
-         satellites[i].acceleration_vec.Y() * scale_for_draw, 
-         satellites[i].acceleration_vec.Z() * scale_for_draw);
-      glEnd();
-      //////////////////////////////////////////////////////////////////////////
-
-      //glTranslatef(satellites[i].m_resultMatrix[3], satellites[i].m_resultMatrix[7], satellites[i].m_resultMatrix[11]);
-      //glColor3f(0, 1, 0);
-      //glRotatef(90, 1, 0, 0);
-      //gluCylinder(gp_quadratic, 0.01, 0, 0.03, 15, 15);
-
-      // FOR DEBUG: draw segment betw satel zero and planet zero
-      const TVector point1(planets[0].m_resultMatrix[3], planets[0].m_resultMatrix[7], planets[0].m_resultMatrix[11]);
-      const TVector point2(satellites[i].m_resultMatrix[3], satellites[i].m_resultMatrix[7], satellites[i].m_resultMatrix[11]);
-      glLoadIdentity();
-      glEnable(GL_COLOR_MATERIAL);
-      glColor3f(1, 0, 0);
-      glBegin(GL_LINES);
-      glVertex3f(point1.X(), point1.Y(), point1.Z());
-      glVertex3f(point2.X(), point2.Y(), point2.Z()); // sat
+      glVertex3f(satellites[i].m_acceleration_vec.X() * 10000, 
+         satellites[i].m_acceleration_vec.Y() * 10000, 
+         satellites[i].m_acceleration_vec.Z() * 10000);
       glEnd();
 
-      //TVector dir = point2 - point1;
-      //TVector normal;
-      //TVector::cross(dir, TVector(1, 0, 0), normal);
-      //glLoadIdentity();
-      //gluLookAt(
-      //   point1.X(), point1.Y(), point1.Z(), // plan. to center
-      //   point2.X(), point2.Y(), point2.Z(), // sat. From eye
-      //   normal.X(), normal.Y(), normal.Z());
-
-      //glRotatef(90, 1, 0, 0);
-      //gluCylinder(gp_quadratic, 0.01, 0, 3, 15, 15);
    }
 }
 
