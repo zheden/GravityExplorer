@@ -19,24 +19,19 @@
 #include "SpaceObjects.h"
 
 #include <iostream>
-using namespace std;
 
-//////////////////////////////////////////////////////////////////////////
-void InitObjects()
+void InitTextures()
 {
-   planets.clear();
-   satellites.clear();
-
    Image* img = loadBMP("graphics//planet1.bmp");
-   const GLuint textureId0 = loadTextureFromImage(img);
+   g_textureId0 = loadTextureFromImage(img);
    delete img;
 
    Image* img1 = loadBMP("graphics//planet2.bmp");
-   const GLuint textureId1 = loadTextureFromImage(img1);
+   g_textureId1 = loadTextureFromImage(img1);
    delete img1;
 
    Image* img_ast = loadBMP("graphics//asteroid.bmp");
-   const GLuint textureId_ast = loadTextureFromImage(img_ast);
+   g_textureId_ast = loadTextureFromImage(img_ast);
    delete img_ast;
 
    gp_quadratic = gluNewQuadric();
@@ -48,20 +43,29 @@ void InitObjects()
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
    glBindTexture(GL_TEXTURE_2D, NULL);
+}
+
+using namespace std;
+
+//////////////////////////////////////////////////////////////////////////
+void InitObjects()
+{
+   planets.clear();
+   satellites.clear();
 
    // earth
    const TVector earth_pos = TVector(0, 0, 0);
-   StaticPlanet earth(earth_pos, 45, textureId0, 0x005a);
+   StaticPlanet earth(earth_pos, 45, g_textureId0, 0x005a);
    planets.push_back(earth);
 
    // saturn
    const TVector saturn_pos = TVector(0, 0, 0);
-   StaticPlanet saturn(saturn_pos, 45, textureId1, 0x0b44);
+   StaticPlanet saturn(saturn_pos, 45, g_textureId1, 0x0b44);
    planets.push_back(saturn);
 
    const TVector satell_velo = TVector(-0.02, 0, 0);
    const TVector satell_pos = TVector(0, 0, 0);
-   Satellite satell(satell_velo, satell_pos, earth.m_mass / 100, textureId_ast, 0x1228);
+   Satellite satell(satell_velo, satell_pos, earth.m_mass / 100, g_textureId_ast, 0x1228);
    satellites.push_back(satell);
 
    g_last_time = glfwGetTime();
@@ -161,6 +165,7 @@ void OnKeyPressed(GLFWwindow* window, int i_key, int scancode, int i_action, int
       break;
    case GLFW_KEY_R:
       InitObjects();
+      g_animate_increment = 2;
       break;
    case GLFW_KEY_ESCAPE:
       exit(1);
@@ -168,14 +173,14 @@ void OnKeyPressed(GLFWwindow* window, int i_key, int scancode, int i_action, int
 }
 
 //////////////////////////////////////////////////////////////////////////
-TVector GetPointInAnotherCoorSys(const TVector& i_point_from, const CMatrix& mat_from/*float i_mat_from[16]*/, const CMatrix& mat_to/*float i_mat_to[16]*/)
+TVector GetPointInAnotherCoorSys(const TVector& i_point_from, float i_mat_from[16], float i_mat_to[16])
 {
-   //CMatrix mat_to("mat1", 4, 4);
-   //mat_to.SetData(i_mat_to);
+   CMatrix mat_to("mat1", 4, 4);
+   mat_to.SetData(i_mat_to);
    CMatrix mat_to_inv = mat_to.Inverse();
 
-   //CMatrix mat_from("mat1", 4, 4);
-   //mat_from.SetData(i_mat_from);
+   CMatrix mat_from("mat1", 4, 4);
+   mat_from.SetData(i_mat_from);
    CMatrix T = mat_to_inv * mat_from;
 
    CMatrix point_from("cent", 4, 1);
@@ -213,12 +218,7 @@ void UpdateState()
          if ( !planets[pi].m_is_on_scene)
             continue;
 
-         CMatrix mat_from("mat_from", 4, 4);
-         mat_from.SetData(planets[pi].m_resultMatrix);
-         CMatrix mat_to("mat_to", 4, 4);
-         mat_to.SetData(satellites[si].m_resultMatrix);
-
-         TVector distance_vec_sat_planet = GetPointInAnotherCoorSys(TVector(0, 0, 0), mat_from, mat_to); // point is dist because planet is in zero
+         TVector distance_vec_sat_planet = GetPointInAnotherCoorSys(TVector(0, 0, 0), planets[pi].m_resultMatrix, satellites[si].m_resultMatrix); // point is dist because planet is in zero
          distance_vec_sat_planet -= satellites[si].m_pos;
 
          distance_vec_draw = distance_vec_sat_planet; // only for debug
@@ -237,9 +237,8 @@ void UpdateState()
       satellites[si].m_velocity += acceleration_vec * time_interval;
       satellites[si].m_pos += satellites[si].m_velocity * time_interval;
    }
-
+   // needed for rotation of planet around its axis
    g_hour_of_day += g_animate_increment;
-
    g_hour_of_day = g_hour_of_day - ((int)(g_hour_of_day/g_num_hours_in_day))*g_num_hours_in_day;
 }
 
@@ -315,7 +314,7 @@ void Reshape( GLFWwindow* window, int width, int height ) {
    //glutPostRedisplay();
 }
 
-void DrawSattelite(uint index)
+void DrawSatellite(uint index)
 {
    GLuint i_texID = satellites[index].m_texID;
    glPushMatrix();
@@ -482,7 +481,7 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &m
 
       glTranslatef(satellites[i].m_pos.X(), satellites[i].m_pos.Y(), satellites[i].m_pos.Z());
 
-      DrawSattelite(i);
+      DrawSatellite(i);
 
       // draw vec betw planet and sat
          //glBegin(GL_LINES);
@@ -543,6 +542,7 @@ int main(int argc, char* argv[])
    glViewport(0, 0, window_width, window_height);
 
    InitGL(argc, argv);
+   InitTextures();
    InitObjects();
 
    glfwSetKeyCallback(window, OnKeyPressed);

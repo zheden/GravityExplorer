@@ -26,3 +26,6 @@ std::vector<Satellite> satellites;
 std::vector<StaticPlanet> planets;
 
 GLUquadricObj * gp_quadratic; // storage for quadric objects
+GLuint g_textureId0 = 0;
+GLuint g_textureId1 = 0;
+GLuint g_textureId_ast = 0;
