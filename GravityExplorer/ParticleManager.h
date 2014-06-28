@@ -80,14 +80,14 @@ void createParticles(float *location)
 		{
 			for(int p = 0; p < 3; p++)
 			{
-				particle.triangle[o][p] = location[p] + randf(-0.002, 0.002);
+				particle.triangle[o][p] = location[p] + randf(-0.001, 0.001);
 			}
 
-			particle.velocity[o] = randf(-0.1, 0.1);
+			particle.velocity[o] = randf(-0.3, 0.3);
 			particle.position[o] = 0.0;
 		}
 
-		particle.lifespan = 10;
+		particle.lifespan = 5;
 		particle.life = 0;
 		particle.active = true;
 		
@@ -121,10 +121,7 @@ void drawParticles()
 		
 		glBegin(GL_TRIANGLES);
 		
-		if (p.type == FLYING)
-		{
-		}
-		else if (p.type == STRETCHING)
+		if (p.type == STRETCHING)
 		{
 			// If the particle is in the stretching phase
 			if (p.life < 2)
@@ -163,6 +160,9 @@ void updateParticles(double deltaTime)
 		for (int j=0; j < 3; j++)
 		{
 			particles[i].position[j] += particles[i].velocity[j] * deltaTime;
+
+			particles[i].color[3] -= 0.15 * deltaTime;
+
 			particles[i].life += deltaTime;
 
 			if (particles[i].life >= particles[i].lifespan)
