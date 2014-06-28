@@ -53,6 +53,7 @@ void InitObjects()
 {
    planets.clear();
    satellites.clear();
+   particles.clear();
 
    // earth
    const TVector earth_pos = TVector(0, 0, 0);
@@ -75,8 +76,7 @@ void InitObjects()
 
 void explosionFX(float x, float y, float z)
 {
-	float* pos = new float[3];
-	pos[0] = x; pos[1] = y; pos[2] = z;
+	float pos[3] = {x, y, z};
 	createParticles(pos);
 }
 
@@ -178,6 +178,7 @@ void OnKeyPressed(GLFWwindow* window, int i_key, int scancode, int i_action, int
    case GLFW_KEY_R:
       InitObjects();
       g_animate_increment = 2;
+      g_initialization_done = false;
       break;
    case GLFW_KEY_ESCAPE:
       exit(1);
@@ -212,12 +213,67 @@ TVector GetPointInAnotherCoorSys(const TVector& i_point_from, float i_mat_from[1
 }
 
 //////////////////////////////////////////////////////////////////////////
-void UpdateState()
+void UpdateState(std::vector<Marker> &markers)
 {
    double time = glfwGetTime();
    double time_interval = time - g_last_time;
    time_interval *= g_animate_increment;
    g_last_time = time;
+
+   if (!markers.empty())
+   {
+      //////////////////////////////////////////////////////////////////////////
+      // determine what planets and satellites will be shown
+      for (uint k = 0; k < planets.size(); ++k)
+         planets[k].m_is_on_scene = false;
+      for (uint k = 0; k < satellites.size(); ++k)
+         satellites[k].m_is_on_scene = false;
+
+      for(uint i=0; i<markers.size(); i++)
+      {
+         const int code = markers[i].code;
+         bool marker_i_found = false;
+         for (uint k = 0; k < planets.size() && !marker_i_found; ++k)
+         {
+            if(code == planets[k].m_code)
+            {
+               planets[k].m_is_on_scene = true;
+               for(int j=0; j<16; j++)
+                  planets[k].m_resultMatrix[j] = markers[i].resultMatrix[j];
+               marker_i_found = true;
+            }
+         }
+
+         for (uint k = 0; k < satellites.size() && !marker_i_found; ++k)
+         {
+            if(code == satellites[k].m_code)
+            {
+               satellites[k].m_is_on_scene = true;
+               for(int j=0; j<16; j++)
+                  satellites[k].m_resultMatrix[j] = markers[i].resultMatrix[j];
+               marker_i_found = true;
+            }
+         }
+      }
+   }
+
+   if (!g_initialization_done)
+   {
+      if (!planets[0].m_is_on_scene || !satellites[0].m_is_on_scene)
+         return;
+
+      // pos of sattelite now is zero
+      TVector distance_vec_sat_planet = GetPointInAnotherCoorSys(TVector(0, 0, 0), planets[0].m_resultMatrix, satellites[0].m_resultMatrix); // point is dist because planet is in zero
+
+      const double length = distance_vec_sat_planet.length();
+      const double part = 0.068 / length;
+      satellites[0].m_pos += distance_vec_sat_planet - distance_vec_sat_planet * part;
+
+      //TVector velo_sat = GetPointInAnotherCoorSys(TVector(0, -1, 0), planets[0].m_resultMatrix, satellites[0].m_resultMatrix);
+      //satellites[0].m_velocity = velo_sat * satellites[0].m_velocity.length();
+
+      g_initialization_done = true;
+   }
 
    if (!g_is_spin_mode)
       return; // nothing to update
@@ -450,13 +506,12 @@ void DrawArrow(GLdouble x1,GLdouble y1,GLdouble z1,GLdouble x2,GLdouble y2,GLdou
 }
 
 //////////////////////////////////////////////////////////////////////////
-void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &markers) 
+void Display( GLFWwindow* window, const cv::Mat &img_bgr) 
 {
    memcpy( bkgnd, img_bgr.data, sizeof(bkgnd) );
 
    // clear buffers
    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
    // move to origin
    glMatrixMode(GL_MODELVIEW);
    glLoadIdentity();
@@ -475,47 +530,13 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &m
    glPopMatrix();
 
    glEnable(GL_DEPTH_TEST);
-
-   // move to marker-position
    glMatrixMode( GL_MODELVIEW );
 
-   if (markers.empty())
-      return;
+   if (!g_initialization_done)
+      return; // to init program we need to have satel and planet 0 
 
-
-   for (uint k = 0; k < planets.size(); ++k)
-      planets[k].m_is_on_scene = false;
-   for (uint k = 0; k < satellites.size(); ++k)
-      satellites[k].m_is_on_scene = false;
-
-   for(uint i=0; i<markers.size(); i++)
-   {
-      const int code = markers[i].code;
-      bool marker_i_found = false;
-      for (uint k = 0; k < planets.size() && !marker_i_found; ++k)
-      {
-         if(code == planets[k].m_code)
-         {
-            planets[k].m_is_on_scene = true;
-            for(int j=0; j<16; j++)
-               planets[k].m_resultMatrix[j] = markers[i].resultMatrix[j];
-            marker_i_found = true;
-         }
-      }
-
-      for (uint k = 0; k < satellites.size() && !marker_i_found; ++k)
-      {
-         if(code == satellites[k].m_code)
-         {
-            satellites[k].m_is_on_scene = true;
-            for(int j=0; j<16; j++)
-               satellites[k].m_resultMatrix[j] = markers[i].resultMatrix[j];
-            marker_i_found = true;
-         }
-      }
-   }
-
-
+   //////////////////////////////////////////////////////////////////////////
+   // draw planets
    for (uint i = 0; i < planets.size(); ++i)
    {
       if (!planets[i].m_is_on_scene)
@@ -527,9 +548,7 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &m
             resultTransposedMatrix[x*4+y] = planets[i].m_resultMatrix[y*4+x];
 
       glLoadMatrixf( resultTransposedMatrix );
-
       DrawPlanet(i);
-
 
 	  
 	  if (particlesCreatePending)
@@ -550,6 +569,8 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &m
 
    }
 
+   //////////////////////////////////////////////////////////////////////////
+   // draw satellites
    for (uint i = 0; i < satellites.size(); ++i)
    {
       TVector pos_sat_in_its_coor_sys;
@@ -562,7 +583,7 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &m
             resultTransposedMatrix[x*4+y] = satellites[i].m_resultMatrix[y*4+x];
 
       glLoadMatrixf( resultTransposedMatrix );
-	  
+
       glTranslatef(satellites[i].m_pos.X(), satellites[i].m_pos.Y(), satellites[i].m_pos.Z());
 
       DrawSatellite(i);
@@ -572,7 +593,6 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &m
          //glVertex3f(0, 0, 0);
          //glVertex3f(distance_vec_draw.X(), distance_vec_draw.Y(), distance_vec_draw.Z());
          //glEnd();
-
 
       // Draw velo and acc vectors
       const double scale_for_velo_draw = 2;
@@ -584,6 +604,7 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr, std::vector<Marker> &m
       const TVector acc_arrow_vec = satellites[i].m_acceleration_vec * scale_for_acc_draw;
       glColor3f(1, 0, 0);
       DrawArrow(0, 0, 0, acc_arrow_vec.X(), acc_arrow_vec.Y(), acc_arrow_vec.Z(), 0.001);
+
    }
 }
 
@@ -597,7 +618,7 @@ int main(int argc, char* argv[])
 
    // initialize the window system
    /* Create a windowed mode window and its OpenGL context */
-   window = glfwCreateWindow(g_camera_width, g_camera_height, "Combine", NULL, NULL);
+   window = glfwCreateWindow(g_camera_width, g_camera_height, "Gravity Explorer", NULL, NULL);
    if (!window)
    {
       glfwTerminate();
@@ -641,8 +662,8 @@ int main(int argc, char* argv[])
       }
       markers.clear();
       markerTracker.findMarker( img_bgr, markers);
-      Display(window,           img_bgr, markers);
-      UpdateState();
+      UpdateState(markers);
+      Display(window,           img_bgr);
 
       glfwSwapBuffers(window);
       glfwPollEvents();

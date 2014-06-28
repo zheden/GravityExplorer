@@ -34,11 +34,8 @@ bool particlesCreatePending(false);
 std::vector <tParticle> particles;
 
 /* location is an array of 3 floats for the world coordinates we want the particles to start at */
-void createParticles(float *location)
+void createParticles(float location[3])
 {
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
 	const int numParticles = 500;
 	/* create flying particles */
 	for(int i = 0; i < numParticles; i++)
@@ -102,6 +99,8 @@ void createParticles(float *location)
 
 void drawParticles()
 {
+   glEnable(GL_BLEND);
+   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	for(int i=0; i < particles.size(); i++)
 	{
 		tParticle p = particles[i];
@@ -151,6 +150,8 @@ void drawParticles()
 		
 		glPopMatrix();
 	}
+
+   glDisable(GL_BLEND);
 }
 
 void updateParticles(double deltaTime)
