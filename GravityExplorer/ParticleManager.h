@@ -10,8 +10,14 @@ float randf(float a, float b) {
     return a + r;
 }
 
+enum ParticleType {
+	FLYING,
+	STRETCHING
+};
 
 struct tParticle {
+	ParticleType type;
+
 	float triangle[3][3];
 	
 	float color[4];
@@ -19,6 +25,7 @@ struct tParticle {
 	float velocity[3];
 	float position[3];
 	
+	float life;
 	float lifespan;
 	bool active;
 };
@@ -33,14 +40,16 @@ void createParticles(float *location)
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	const int numParticles = 500;
-	/* generate random values for the triangles */
-	for(int n=0; n < numParticles; n++)
+	/* create flying particles */
+	for(int i = 0; i < numParticles; i++)
 	{
 		tParticle particle;
 
-		for(int o=0; o < 3; o++)
+		particle.type = FLYING;
+
+		for(int o = 0; o < 3; o++)
 		{
-			for(int p=0; p < 3; p++)
+			for(int p = 0; p < 3; p++)
 			{
 				particle.triangle[o][p] = location[p] + randf(-0.002, 0.002);
 			}
@@ -50,6 +59,36 @@ void createParticles(float *location)
 		}
 
 		particle.lifespan = 10;
+		particle.active = true;
+		
+		particle.color[0] = randf(0.5, 1.0);
+		particle.color[1] = randf(0.1, 0.6);
+		particle.color[2] = 0;
+		particle.color[3] = randf(0.5, 1.0);
+
+		particles.push_back(particle);
+	}
+	
+	/* create stretching particles */
+	for(int i = 0; i < numParticles; i++)
+	{
+		tParticle particle;
+		
+		particle.type = STRETCHING;
+
+		for(int o = 0; o < 3; o++)
+		{
+			for(int p = 0; p < 3; p++)
+			{
+				particle.triangle[o][p] = location[p] + randf(-0.002, 0.002);
+			}
+
+			particle.velocity[o] = randf(-0.1, 0.1);
+			particle.position[o] = 0.0;
+		}
+
+		particle.lifespan = 10;
+		particle.life = 0;
 		particle.active = true;
 		
 		particle.color[0] = randf(0.5, 1.0);
@@ -75,11 +114,38 @@ void drawParticles()
 		glPushMatrix();
 		glColor4fv(p.color);
 
-		glTranslatef(p.position[0], p.position[1], p.position[2]);
+		if (p.type == FLYING)
+		{
+			glTranslatef(p.position[0], p.position[1], p.position[2]);
+		}
 		
 		glBegin(GL_TRIANGLES);
 		
-		//glVertex3f(particles[i].triangle[0][0] + particles[i].position[0], particles[i].triangle[0][1] + particles[i].position[1], particles[i].triangle[0][2] + particles[i].position[2]);
+		if (p.type == FLYING)
+		{
+		}
+		else if (p.type == STRETCHING)
+		{
+			// If the particle is in the stretching phase
+			if (p.life < 2)
+			{
+				particles[i].triangle[0][0] += particles[i].position[0];
+				particles[i].triangle[0][1] += particles[i].position[1];
+				particles[i].triangle[0][2] += particles[i].position[2];
+			}
+			// The particle is in the shrinking stage
+			else
+			{
+				particles[i].triangle[1][0] += particles[i].position[0];
+				particles[i].triangle[1][1] += particles[i].position[1];
+				particles[i].triangle[1][2] += particles[i].position[2];
+				
+				particles[i].triangle[2][0] += particles[i].position[0];
+				particles[i].triangle[2][1] += particles[i].position[1];
+				particles[i].triangle[2][2] += particles[i].position[2];
+			}
+		}
+		
 		glVertex3fv(p.triangle[0]);
 		glVertex3fv(p.triangle[1]);
 		glVertex3fv(p.triangle[2]);
@@ -97,9 +163,9 @@ void updateParticles(double deltaTime)
 		for (int j=0; j < 3; j++)
 		{
 			particles[i].position[j] += particles[i].velocity[j] * deltaTime;
-			particles[i].lifespan -= deltaTime;
+			particles[i].life += deltaTime;
 
-			if (particles[i].lifespan <= 0)
+			if (particles[i].life >= particles[i].lifespan)
 			{
 				particles[i].active = false;
 			}
