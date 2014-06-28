@@ -13,9 +13,14 @@ float randf(float a, float b) {
 
 struct tParticle {
 	float triangle[3][3];
+	
 	float color[4];
+
 	float velocity[3];
 	float position[3];
+	
+	float lifespan;
+	bool active;
 };
 
 bool particlesCreatePending(false);
@@ -43,7 +48,10 @@ void createParticles(float *location)
 			particle.velocity[o] = randf(-0.1, 0.1);
 			particle.position[o] = 0.0;
 		}
-			
+
+		particle.lifespan = 10;
+		particle.active = true;
+		
 		particle.color[0] = randf(0.5, 1.0);
 		particle.color[1] = randf(0.1, 0.6);
 		particle.color[2] = 0;
@@ -57,17 +65,27 @@ void drawParticles()
 {
 	for(int i=0; i < particles.size(); i++)
 	{
-		glColor4fv(particles[i].color);
+		tParticle p = particles[i];
+
+		if (!p.active)
+		{
+			continue;
+		}
+
 		glPushMatrix();
-		glTranslatef(particles[i].position[0], particles[i].position[1], particles[i].position[2]);
+		glColor4fv(p.color);
+
+		glTranslatef(p.position[0], p.position[1], p.position[2]);
 		
-	glBegin(GL_TRIANGLES);
+		glBegin(GL_TRIANGLES);
+		
 		//glVertex3f(particles[i].triangle[0][0] + particles[i].position[0], particles[i].triangle[0][1] + particles[i].position[1], particles[i].triangle[0][2] + particles[i].position[2]);
-		glVertex3fv(particles[i].triangle[0]);
-		glVertex3fv(particles[i].triangle[1]);
-		glVertex3fv(particles[i].triangle[2]);
+		glVertex3fv(p.triangle[0]);
+		glVertex3fv(p.triangle[1]);
+		glVertex3fv(p.triangle[2]);
 		
-	glEnd();
+		glEnd();
+		
 		glPopMatrix();
 	}
 }
@@ -79,6 +97,12 @@ void updateParticles(double deltaTime)
 		for (int j=0; j < 3; j++)
 		{
 			particles[i].position[j] += particles[i].velocity[j] * deltaTime;
+			particles[i].lifespan -= deltaTime;
+
+			if (particles[i].lifespan <= 0)
+			{
+				particles[i].active = false;
+			}
 		}
 	}
 }
