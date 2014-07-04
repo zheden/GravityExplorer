@@ -53,7 +53,7 @@ void InitObjects()
 {
    planets.clear();
    satellites.clear();
-   particles.clear();
+   //particles.clear();
 
    // earth
    const TVector earth_pos = TVector(0, 0, 0);
@@ -290,7 +290,13 @@ void UpdateState(std::vector<Marker> &markers)
 		 // Check for collision between sat and planet
 		 if (dist_sat_planet < 0.03 * planets[pi].m_radius_scale)
 		 {
-			 particlesCreatePending = true;
+			 // Create explosion particle effect
+			 TVector collision_point = GetPointInAnotherCoorSys(satellites[si].m_pos, satellites[si].m_resultMatrix, planets[pi].m_resultMatrix);
+			 float pos[3] = {collision_point.X(), collision_point.Y(), collision_point.Z()};
+			 AddParticles(pos, 200, PARTICLE_FLYING, 0.2);
+			 AddParticles(pos, 100, PARTICLE_STRETCHING, 0.1);
+
+			 InitObjects();
 		 }
 
          const TVector gravity_direction = distance_vec_sat_planet.normalize();
@@ -552,17 +558,6 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr)
 
       glLoadMatrixf( resultTransposedMatrix );
       DrawPlanet(i);
-
-	  // If a particle effect was requested on this frame
-	  if (particlesCreatePending)
-	  {
-		  // Create explosion particle effect
-		  float pos[3] = {0.03, 0.0, 0.0};
-		  AddParticles(pos, 200, PARTICLE_FLYING, 0.2);
-		  AddParticles(pos, 100, PARTICLE_STRETCHING, 0.1);
-
-		  particlesCreatePending = false;
-	  }
    }
 
    //////////////////////////////////////////////////////////////////////////
