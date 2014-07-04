@@ -74,12 +74,6 @@ void InitObjects()
 }
 
 
-void explosionFX(float x, float y, float z)
-{
-	float pos[3] = {x, y, z};
-	createParticles(pos);
-}
-
 //////////////////////////////////////////////////////////////////////////
 void OnKeyPressed(GLFWwindow* window, int i_key, int scancode, int i_action, int mods)
 {
@@ -262,7 +256,7 @@ void UpdateState(std::vector<Marker> &markers)
       if (!planets[0].m_is_on_scene || !satellites[0].m_is_on_scene)
          return;
 
-      // pos of sattelite now is zero
+      // pos of satellite now is zero
       TVector distance_vec_sat_planet = GetPointInAnotherCoorSys(TVector(0, 0, 0), planets[0].m_resultMatrix, satellites[0].m_resultMatrix); // point is dist because planet is in zero
 
       const double length = distance_vec_sat_planet.length();
@@ -550,23 +544,18 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr)
       glLoadMatrixf( resultTransposedMatrix );
       DrawPlanet(i);
 
-	  
+	  // If a particle effect was requested on this frame
 	  if (particlesCreatePending)
 	  {
-		  particlesCreatePending = false;
-		  //glPushMatrix();
-		  explosionFX(0.05, 0.0, 0.0);
-		  //glPopMatrix();
-	  }
-	  if (particles.size() > 0)
-	  {
-		  //glPushMatrix();
-		  drawParticles();
-		  //glColor3f(1, 1, 0);
-		  //glutSolidSphere(40.0, 20, 20);
-		  //glPopMatrix();
-	  }
+		  // Create explosion particle effect
+		  float pos[3] = {0.05, 0.0, 0.0};
+		  InitParticles(pos, 500, FLYING);
+		  InitParticles(pos, 500, STRETCHING);
 
+		  particlesCreatePending = false;
+	  }
+	  
+	  DrawParticles();
    }
 
    //////////////////////////////////////////////////////////////////////////

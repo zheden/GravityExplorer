@@ -2,7 +2,6 @@
 
 #include <iostream>
 
-
 float randf(float a, float b) {
     float random = ((float) std::rand()) / (float) RAND_MAX;
     float diff = b - a;
@@ -33,61 +32,54 @@ struct tParticle {
 bool particlesCreatePending(false);
 std::vector <tParticle> particles;
 
-/* location is an array of 3 floats for the world coordinates we want the particles to start at */
-void createParticles(float location[3])
+/**
+*	location - an array of 3 floats for the world coordinates we want the particles to start at 
+*/
+void InitParticles(float location[3], int numParticles, ParticleType type)
 {
-	const int numParticles = 500;
-	/* create flying particles */
 	for(int i = 0; i < numParticles; i++)
 	{
 		tParticle particle;
 
-		particle.type = FLYING;
+		particle.type = type;
 
-		for(int o = 0; o < 3; o++)
+		/* init a flying particle */
+		if (type == FLYING)
 		{
-			for(int p = 0; p < 3; p++)
+			for(int j = 0; j < 3; j++)
 			{
-				particle.triangle[o][p] = location[p] + randf(-0.002, 0.002);
+				for(int k = 0; k < 3; k++)
+				{
+					particle.triangle[j][k] = location[k] + randf(-0.002, 0.002);
+				}
+
+				particle.velocity[j] = randf(-0.1, 0.1);
+				particle.position[j] = 0.0;
 			}
 
-			particle.velocity[o] = randf(-0.1, 0.1);
-			particle.position[o] = 0.0;
+			particle.lifespan = 10;
+			particle.active = true;
 		}
 
-		particle.lifespan = 10;
-		particle.active = true;
-		
-		particle.color[0] = randf(0.5, 1.0);
-		particle.color[1] = randf(0.1, 0.6);
-		particle.color[2] = 0;
-		particle.color[3] = randf(0.5, 1.0);
-
-		particles.push_back(particle);
-	}
-	
-	/* create stretching particles */
-	for(int i = 0; i < numParticles; i++)
-	{
-		tParticle particle;
-		
-		particle.type = STRETCHING;
-
-		for(int o = 0; o < 3; o++)
+		/* init a stretching particle */
+		if (type == STRETCHING)
 		{
-			for(int p = 0; p < 3; p++)
+			for(int j = 0; j < 3; j++)
 			{
-				particle.triangle[o][p] = location[p] + randf(-0.001, 0.001);
+				for(int k = 0; k < 3; k++)
+				{
+					particle.triangle[j][k] = location[k] + randf(-0.001, 0.001);
+				}
+
+				particle.velocity[j] = randf(-0.3, 0.3);
+				particle.position[j] = 0.0;
 			}
 
-			particle.velocity[o] = randf(-0.3, 0.3);
-			particle.position[o] = 0.0;
+			particle.lifespan = 5;
+			particle.life = 0;
+			particle.active = true;
 		}
 
-		particle.lifespan = 5;
-		particle.life = 0;
-		particle.active = true;
-		
 		particle.color[0] = randf(0.5, 1.0);
 		particle.color[1] = randf(0.1, 0.6);
 		particle.color[2] = 0;
@@ -97,7 +89,7 @@ void createParticles(float location[3])
 	}
 }
 
-void drawParticles()
+void DrawParticles()
 {
    glEnable(GL_BLEND);
    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
