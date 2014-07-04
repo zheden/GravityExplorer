@@ -35,7 +35,7 @@ std::vector <tParticle> particles;
 /**
 *	location - an array of 3 floats for the world coordinates we want the particles to start at 
 */
-void InitParticles(float location[3], int numParticles, ParticleType type)
+void AddParticles(float location[3], int numParticles, ParticleType type)
 {
 	for(int i = 0; i < numParticles; i++)
 	{

@@ -214,6 +214,8 @@ void UpdateState(std::vector<Marker> &markers)
    time_interval *= g_animate_increment;
    g_last_time = time;
 
+   updateParticles(time_interval);
+
    if (!markers.empty())
    {
       //////////////////////////////////////////////////////////////////////////
@@ -302,8 +304,6 @@ void UpdateState(std::vector<Marker> &markers)
    // needed for rotation of planet around its axis
    g_hour_of_day += g_animate_increment;
    g_hour_of_day = g_hour_of_day - ((int)(g_hour_of_day/g_num_hours_in_day))*g_num_hours_in_day;
-
-   updateParticles(time_interval);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -525,9 +525,11 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr)
 
    glEnable(GL_DEPTH_TEST);
    glMatrixMode( GL_MODELVIEW );
+   
+   //////////////////////////////////////////////////////////////////////////
 
-   if (!g_initialization_done)
-      return; // to init program we need to have satel and planet 0 
+   //if (!g_initialization_done)
+   //   return; // to init program we need to have satel and planet 0 
 
    //////////////////////////////////////////////////////////////////////////
    // draw planets
@@ -548,15 +550,17 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr)
 	  if (particlesCreatePending)
 	  {
 		  // Create explosion particle effect
-		  float pos[3] = {0.05, 0.0, 0.0};
-		  InitParticles(pos, 500, FLYING);
-		  InitParticles(pos, 500, STRETCHING);
+		  float pos[3] = {0.03, 0.0, 0.0};
+		  AddParticles(pos, 500, FLYING);
+		  AddParticles(pos, 500, STRETCHING);
 
 		  particlesCreatePending = false;
 	  }
-	  
-	  DrawParticles();
    }
+
+   //////////////////////////////////////////////////////////////////////////
+   // draw particles
+   DrawParticles();
 
    //////////////////////////////////////////////////////////////////////////
    // draw satellites
