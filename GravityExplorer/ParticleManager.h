@@ -26,6 +26,7 @@ struct Particle {
 	
 	float color[4];
 
+	float initVelocity[3];
 	float velocity[3];
 	float position[3];
 	float damping;
@@ -64,7 +65,7 @@ void AddParticles(float location[3], int numParticles, ParticleType type)
 					particle.triangle[j][k] = location[k] + randf(-0.002, 0.002);
 				}
 
-				particle.velocity[j] = randf(-0.2, 0.2);
+				particle.initVelocity[j] = randf(-0.2, 0.2);
 				particle.position[j] = 0.0;
 			}
 
@@ -83,7 +84,7 @@ void AddParticles(float location[3], int numParticles, ParticleType type)
 					particle.triangle[j][k] = location[k] + randf(-0.001, 0.001);
 				}
 
-				particle.velocity[j] = randf(-0.1, 0.1);
+				particle.initVelocity[j] = randf(-0.1, 0.1);
 				particle.position[j] = 0.0;
 			}
 
@@ -91,9 +92,13 @@ void AddParticles(float location[3], int numParticles, ParticleType type)
 			particle.life = 0;
 			particle.active = true;
 			particle.phase = PHASE_STRETCH;
-			particle.stretchPhasePercent = 0.5;
+			particle.stretchPhasePercent = 0.2;
 			particle.damping = 0.75;
 		}
+
+		particle.velocity[0] = particle.initVelocity[0];
+		particle.velocity[1] = particle.initVelocity[1];
+		particle.velocity[2] = particle.initVelocity[2];
 
 		particle.color[0] = randf(0.5, 1.0);
 		particle.color[1] = randf(0.1, 0.6);
@@ -173,7 +178,7 @@ void updateParticles(double deltaTime)
 				}
 			}
 
-			// slow down
+			// damping
 			p->velocity[j] *= p->damping;
 
 			// fade out
@@ -193,10 +198,10 @@ void updateParticles(double deltaTime)
 			{
 				p->phase = PHASE_SHRINK;
 
-				// reset position
-				p->position[0] = 0.0;
-				p->position[1] = 0.0;
-				p->position[2] = 0.0;
+				// reset velocity
+				p->velocity[0] = p->initVelocity[0];
+				p->velocity[1] = p->initVelocity[1];
+				p->velocity[2] = p->initVelocity[2];
 			}
 		}
 	}
