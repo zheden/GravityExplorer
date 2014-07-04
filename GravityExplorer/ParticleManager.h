@@ -47,7 +47,7 @@ std::vector <Particle> particles;
 /**
 *	location - an array of 3 floats for the world coordinates we want the particles to start at 
 */
-void AddParticles(float location[3], int numParticles, ParticleType type)
+void AddParticles(float location[3], int numParticles, ParticleType type, float speed)
 {
 	for(int i = 0; i < numParticles; i++)
 	{
@@ -65,13 +65,13 @@ void AddParticles(float location[3], int numParticles, ParticleType type)
 					particle.triangle[j][k] = location[k] + randf(-0.002, 0.002);
 				}
 
-				particle.initVelocity[j] = randf(-0.2, 0.2);
+				particle.initVelocity[j] = randf(-speed, speed);
 				particle.position[j] = 0.0;
 			}
 
 			particle.lifespan = 10;
 			particle.active = true;
-			particle.damping = 0.9;
+			particle.damping = 0.8;
 		}
 
 		/* init a stretching particle */
@@ -84,7 +84,7 @@ void AddParticles(float location[3], int numParticles, ParticleType type)
 					particle.triangle[j][k] = location[k] + randf(-0.001, 0.001);
 				}
 
-				particle.initVelocity[j] = randf(-0.1, 0.1);
+				particle.initVelocity[j] = randf(-speed, speed);
 				particle.position[j] = 0.0;
 			}
 

@@ -214,8 +214,6 @@ void UpdateState(std::vector<Marker> &markers)
    time_interval *= g_animate_increment;
    g_last_time = time;
 
-   updateParticles(time_interval);
-
    if (!markers.empty())
    {
       //////////////////////////////////////////////////////////////////////////
@@ -288,6 +286,13 @@ void UpdateState(std::vector<Marker> &markers)
          distance_vec_draw = distance_vec_sat_planet; // only for debug
 
          const double dist_sat_planet = distance_vec_sat_planet.length();
+
+		 // Check for collision between sat and planet
+		 if (dist_sat_planet < 0.03 * planets[pi].m_radius_scale)
+		 {
+			 particlesCreatePending = true;
+		 }
+
          const TVector gravity_direction = distance_vec_sat_planet.normalize();
 
          // ma = M*m*G/r^2
@@ -304,6 +309,8 @@ void UpdateState(std::vector<Marker> &markers)
    // needed for rotation of planet around its axis
    g_hour_of_day += g_animate_increment;
    g_hour_of_day = g_hour_of_day - ((int)(g_hour_of_day/g_num_hours_in_day))*g_num_hours_in_day;
+
+   updateParticles(time_interval);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -528,8 +535,8 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr)
    
    //////////////////////////////////////////////////////////////////////////
 
-   //if (!g_initialization_done)
-   //   return; // to init program we need to have satel and planet 0 
+   if (!g_initialization_done)
+      return; // to init program we need to have satel and planet 0 
 
    //////////////////////////////////////////////////////////////////////////
    // draw planets
@@ -551,8 +558,8 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr)
 	  {
 		  // Create explosion particle effect
 		  float pos[3] = {0.03, 0.0, 0.0};
-		  AddParticles(pos, 200, PARTICLE_FLYING);
-		  AddParticles(pos, 100, PARTICLE_STRETCHING);
+		  AddParticles(pos, 200, PARTICLE_FLYING, 0.2);
+		  AddParticles(pos, 100, PARTICLE_STRETCHING, 0.1);
 
 		  particlesCreatePending = false;
 	  }
