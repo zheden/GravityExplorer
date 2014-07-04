@@ -10,11 +10,16 @@ float randf(float a, float b) {
 }
 
 enum ParticleType {
-	FLYING,
-	STRETCHING
+	PARTICLE_FLYING,
+	PARTICLE_STRETCHING
 };
 
-struct tParticle {
+enum StretchPhase {
+	PHASE_STRETCH,
+	PHASE_SHRINK
+};
+
+struct Particle {
 	ParticleType type;
 
 	float triangle[3][3];
@@ -23,14 +28,20 @@ struct tParticle {
 
 	float velocity[3];
 	float position[3];
+	float damping;
 	
 	float life;
 	float lifespan;
+
+	// phase of stretching particles
+	StretchPhase phase;
+	float stretchPhasePercent;
+
 	bool active;
 };
 
 bool particlesCreatePending(false);
-std::vector <tParticle> particles;
+std::vector <Particle> particles;
 
 /**
 *	location - an array of 3 floats for the world coordinates we want the particles to start at 
@@ -39,12 +50,12 @@ void AddParticles(float location[3], int numParticles, ParticleType type)
 {
 	for(int i = 0; i < numParticles; i++)
 	{
-		tParticle particle;
+		Particle particle;
 
 		particle.type = type;
 
 		/* init a flying particle */
-		if (type == FLYING)
+		if (type == PARTICLE_FLYING)
 		{
 			for(int j = 0; j < 3; j++)
 			{
@@ -59,10 +70,11 @@ void AddParticles(float location[3], int numParticles, ParticleType type)
 
 			particle.lifespan = 10;
 			particle.active = true;
+			particle.damping = 1;
 		}
 
 		/* init a stretching particle */
-		if (type == STRETCHING)
+		if (type == PARTICLE_STRETCHING)
 		{
 			for(int j = 0; j < 3; j++)
 			{
@@ -78,6 +90,9 @@ void AddParticles(float location[3], int numParticles, ParticleType type)
 			particle.lifespan = 5;
 			particle.life = 0;
 			particle.active = true;
+			particle.phase = PHASE_STRETCH;
+			particle.stretchPhasePercent = 0.5;
+			particle.damping = 0.95;
 		}
 
 		particle.color[0] = randf(0.5, 1.0);
@@ -91,11 +106,11 @@ void AddParticles(float location[3], int numParticles, ParticleType type)
 
 void DrawParticles()
 {
-   glEnable(GL_BLEND);
-   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	for(int i=0; i < particles.size(); i++)
 	{
-		tParticle p = particles[i];
+		Particle p = particles[i];
 
 		if (!p.active)
 		{
@@ -105,35 +120,13 @@ void DrawParticles()
 		glPushMatrix();
 		glColor4fv(p.color);
 
-		if (p.type == FLYING)
+		if (p.type == PARTICLE_FLYING)
 		{
 			glTranslatef(p.position[0], p.position[1], p.position[2]);
 		}
-		
+
 		glBegin(GL_TRIANGLES);
-		
-		if (p.type == STRETCHING)
-		{
-			// If the particle is in the stretching phase
-			if (p.life < 2)
-			{
-				particles[i].triangle[0][0] += particles[i].position[0];
-				particles[i].triangle[0][1] += particles[i].position[1];
-				particles[i].triangle[0][2] += particles[i].position[2];
-			}
-			// The particle is in the shrinking stage
-			else
-			{
-				particles[i].triangle[1][0] += particles[i].position[0];
-				particles[i].triangle[1][1] += particles[i].position[1];
-				particles[i].triangle[1][2] += particles[i].position[2];
-				
-				particles[i].triangle[2][0] += particles[i].position[0];
-				particles[i].triangle[2][1] += particles[i].position[1];
-				particles[i].triangle[2][2] += particles[i].position[2];
-			}
-		}
-		
+
 		glVertex3fv(p.triangle[0]);
 		glVertex3fv(p.triangle[1]);
 		glVertex3fv(p.triangle[2]);
@@ -148,19 +141,62 @@ void DrawParticles()
 
 void updateParticles(double deltaTime)
 {
+	Particle* p;
+
 	for (int i=0; i < particles.size(); i++)
 	{
+		p = &particles[i];
+
 		for (int j=0; j < 3; j++)
 		{
-			particles[i].position[j] += particles[i].velocity[j] * deltaTime;
-
-			particles[i].color[3] -= 0.15 * deltaTime;
-
-			particles[i].life += deltaTime;
-
-			if (particles[i].life >= particles[i].lifespan)
+			// move whole triangle
+			if (p->type == PARTICLE_FLYING)
 			{
-				particles[i].active = false;
+				p->position[j] += p->velocity[j] * deltaTime;
+			}
+
+			// move vertices
+			if (p->type == PARTICLE_STRETCHING)
+			{
+				// If the particle is in the stretching phase
+				if (p->phase == PHASE_STRETCH)
+				{
+					// move vertex 0
+					p->triangle[0][j] += p->velocity[j] * deltaTime;
+				}
+				// The particle is in the shrinking stage
+				else
+				{
+					// move vertexes 1 and 2
+					p->triangle[1][j] += p->velocity[j] * deltaTime;
+					p->triangle[2][j] += p->velocity[j] * deltaTime;
+				}
+			}
+
+			// slow down
+			p->velocity[j] *= p->damping * deltaTime;
+
+			// fade out
+			p->color[3] -= 0.15 * deltaTime;
+
+			// decrease life left
+			p->life += deltaTime;
+
+			// deactivate if dead
+			if (p->life >= p->lifespan)
+			{
+				p->active = false;
+			}
+
+			// check if need to change phase on this frame
+			if (p->type == PARTICLE_STRETCHING && p->phase == PHASE_STRETCH && p->life >= p->stretchPhasePercent * p->lifespan)
+			{
+				p->phase = PHASE_SHRINK;
+
+				// reset position
+				p->position[0] = 0.0;
+				p->position[1] = 0.0;
+				p->position[2] = 0.0;
 			}
 		}
 	}

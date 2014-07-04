@@ -551,8 +551,8 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr)
 	  {
 		  // Create explosion particle effect
 		  float pos[3] = {0.03, 0.0, 0.0};
-		  AddParticles(pos, 500, FLYING);
-		  AddParticles(pos, 500, STRETCHING);
+		  AddParticles(pos, 500, PARTICLE_FLYING);
+		  AddParticles(pos, 500, PARTICLE_STRETCHING);
 
 		  particlesCreatePending = false;
 	  }
