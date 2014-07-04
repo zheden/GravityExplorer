@@ -64,13 +64,13 @@ void AddParticles(float location[3], int numParticles, ParticleType type)
 					particle.triangle[j][k] = location[k] + randf(-0.002, 0.002);
 				}
 
-				particle.velocity[j] = randf(-0.1, 0.1);
+				particle.velocity[j] = randf(-0.2, 0.2);
 				particle.position[j] = 0.0;
 			}
 
 			particle.lifespan = 10;
 			particle.active = true;
-			particle.damping = 1;
+			particle.damping = 0.9;
 		}
 
 		/* init a stretching particle */
@@ -83,16 +83,16 @@ void AddParticles(float location[3], int numParticles, ParticleType type)
 					particle.triangle[j][k] = location[k] + randf(-0.001, 0.001);
 				}
 
-				particle.velocity[j] = randf(-0.3, 0.3);
+				particle.velocity[j] = randf(-0.1, 0.1);
 				particle.position[j] = 0.0;
 			}
 
-			particle.lifespan = 5;
+			particle.lifespan = 10;
 			particle.life = 0;
 			particle.active = true;
 			particle.phase = PHASE_STRETCH;
 			particle.stretchPhasePercent = 0.5;
-			particle.damping = 0.95;
+			particle.damping = 0.75;
 		}
 
 		particle.color[0] = randf(0.5, 1.0);
@@ -174,7 +174,7 @@ void updateParticles(double deltaTime)
 			}
 
 			// slow down
-			p->velocity[j] *= p->damping * deltaTime;
+			p->velocity[j] *= p->damping;
 
 			// fade out
 			p->color[3] -= 0.15 * deltaTime;
