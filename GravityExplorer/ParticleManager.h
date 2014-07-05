@@ -113,7 +113,7 @@ void DrawParticles()
 {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	for(int i=0; i < particles.size(); i++)
+	for(uint i=0; i < particles.size(); i++)
 	{
 		Particle p = particles[i];
 
@@ -148,11 +148,11 @@ void updateParticles(double deltaTime)
 {
 	Particle* p;
 
-	for (int i=0; i < particles.size(); i++)
+	for (uint i=0; i < particles.size(); i++)
 	{
 		p = &particles[i];
 
-		for (int j=0; j < 3; j++)
+		for (uint j=0; j < 3; j++)
 		{
 			// move whole triangle
 			if (p->type == PARTICLE_FLYING)

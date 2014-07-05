@@ -11,6 +11,7 @@
 #include <opencv/highgui.h>
 
 #include <iostream>
+#include <list>
 
 #include "ImgLoader.h"
 #include "PoseEstimation.h"
@@ -331,8 +332,13 @@ void UpdateState(std::vector<Marker> &markers)
 
 		   satellites[si].m_acceleration_vec = acceleration_vec;
 		   // calculate position of moon according to its velocity and position of earth
-		   satellites[si].m_velocity += acceleration_vec * time_interval;
-		   satellites[si].m_pos += satellites[si].m_velocity * time_interval;
+      satellites[si].m_velocity += acceleration_vec * time_interval;
+
+      if (satellites[si].m_tail.empty() || satellites[si].m_tail.front().dist(satellites[si].m_pos) > 0.003)
+         satellites[si].m_tail.push_front(satellites[si].m_pos); // push old pos
+      while (satellites[si].m_tail.size() > 35)
+         satellites[si].m_tail.pop_back();
+      satellites[si].m_pos += satellites[si].m_velocity * time_interval;
 
 		   // Reset if the satellite is too far from all planets
 		   if (!found_close_planet)
@@ -430,6 +436,31 @@ void Reshape( GLFWwindow* window, int width, int height )
    //glutPostRedisplay();
 }
 
+//////////////////////////////////////////////////////////////////////////
+void DrawSatelliteTail(uint index)
+{
+   glEnable(GL_BLEND);
+   glColor4f(0.3, 0.3, 0.3, 0.4);
+   glPushMatrix();
+   const std::list<TVector> tail = satellites[index].m_tail;
+
+   GLfloat scale_factor = 1;
+   for (std::list<TVector>::const_iterator it=tail.begin(); it != tail.end(); ++it)
+   {
+      const TVector pos = *it;
+      glPushMatrix();
+      glTranslatef(pos.X(), pos.Y(), pos.Z());
+      glScalef(scale_factor, scale_factor, scale_factor);
+      glutWireSphere(0.004, int(scale_factor * 10), int(scale_factor * 10));
+      glPopMatrix();
+
+      scale_factor *= 0.95;
+   }
+   glPopMatrix();
+   glDisable(GL_BLEND);
+}
+
+//////////////////////////////////////////////////////////////////////////
 void DrawSatellite(uint index)
 {
    GLuint i_texID = satellites[index].m_texID;
@@ -549,7 +580,10 @@ void DrawArrow(GLdouble x1,GLdouble y1,GLdouble z1,GLdouble x2,GLdouble y2,GLdou
 
    glPopMatrix ();
 
-}
+      glPopMatrix();
+
+      DrawSatelliteTail(i);
+   }
 
 //////////////////////////////////////////////////////////////////////////
 void Display( GLFWwindow* window, const cv::Mat &img_bgr) 

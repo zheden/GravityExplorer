@@ -36,6 +36,7 @@ public:
 
    TVector m_velocity;
    TVector m_acceleration_vec;
+   std::list<TVector> m_tail;
 };
 
 
