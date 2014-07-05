@@ -334,9 +334,9 @@ void UpdateState(std::vector<Marker> &markers)
 		   // calculate position of moon according to its velocity and position of earth
       satellites[si].m_velocity += acceleration_vec * time_interval;
 
-      if (satellites[si].m_tail.empty() || satellites[si].m_tail.front().dist(satellites[si].m_pos) > 0.003)
+      if (satellites[si].m_tail.empty() || satellites[si].m_tail.front().dist(satellites[si].m_pos) > 0.001)
          satellites[si].m_tail.push_front(satellites[si].m_pos); // push old pos
-      while (satellites[si].m_tail.size() > 35)
+      while (satellites[si].m_tail.size() > 50)
          satellites[si].m_tail.pop_back();
       satellites[si].m_pos += satellites[si].m_velocity * time_interval;
 
@@ -440,7 +440,9 @@ void Reshape( GLFWwindow* window, int width, int height )
 void DrawSatelliteTail(uint index)
 {
    glEnable(GL_BLEND);
-   glColor4f(0.3, 0.3, 0.3, 0.4);
+   glDisable( GL_LIGHTING );
+   glDisable( GL_LIGHT0 );
+   glColor4f(1, 1, 0, 0.3);
    glPushMatrix();
    const std::list<TVector> tail = satellites[index].m_tail;
 
@@ -451,13 +453,17 @@ void DrawSatelliteTail(uint index)
       glPushMatrix();
       glTranslatef(pos.X(), pos.Y(), pos.Z());
       glScalef(scale_factor, scale_factor, scale_factor);
+      glColor4f(1, 1, 0, scale_factor * 0.3);
+      //gluSphere(gp_quadratic, 0.004, int(scale_factor * 10), int(scale_factor * 10));
       glutWireSphere(0.004, int(scale_factor * 10), int(scale_factor * 10));
       glPopMatrix();
 
-      scale_factor *= 0.95;
+      scale_factor *= 0.98;
    }
    glPopMatrix();
    glDisable(GL_BLEND);
+   glEnable( GL_LIGHTING );
+   glEnable( GL_LIGHT0 );
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -578,11 +584,7 @@ void DrawArrow(GLdouble x1,GLdouble y1,GLdouble z1,GLdouble x2,GLdouble y2,GLdou
    gluDisk(quadObj, 0.0, D, 32, 1);
    gluDeleteQuadric(quadObj);
 
-   glPopMatrix ();
-
-      glPopMatrix();
-
-      DrawSatelliteTail(i);
+   glPopMatrix();
    }
 
 //////////////////////////////////////////////////////////////////////////
@@ -648,10 +650,11 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr)
 
       glLoadMatrixf( resultTransposedMatrix );
 
-      glTranslatef(satellites[i].m_pos.X(), satellites[i].m_pos.Y(), satellites[i].m_pos.Z());
-
 	  if (!g_is_pending_reset)
 	  {
+        glPushMatrix();
+
+        glTranslatef(satellites[i].m_pos.X(), satellites[i].m_pos.Y(), satellites[i].m_pos.Z());
 		  DrawSatellite(i);
 
 		  // draw vec betw planet and sat
@@ -670,10 +673,14 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr)
 		  const TVector acc_arrow_vec = satellites[i].m_acceleration_vec * scale_for_acc_draw;
 		  glColor3f(1, 0, 0);
 		  DrawArrow(0, 0, 0, acc_arrow_vec.X(), acc_arrow_vec.Y(), acc_arrow_vec.Z(), 0.001);
+        glPopMatrix();
+
+        DrawSatelliteTail(i);
 	  }
 
 	  //////////////////////////////////////////////////////////////////////////
 	  // draw particles
+     glTranslatef(satellites[i].m_pos.X(), satellites[i].m_pos.Y(), satellites[i].m_pos.Z());
 	  DrawParticles();
 
    }
