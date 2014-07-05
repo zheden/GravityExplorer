@@ -92,7 +92,7 @@ void AddParticles(float location[3], int numParticles, ParticleType type, float 
 			particle.life = 0;
 			particle.active = true;
 			particle.phase = PHASE_STRETCH;
-			particle.stretchPhasePercent = 0.2;
+			particle.stretchPhasePercent = 0.25;
 			particle.damping = 0.75;
 		}
 

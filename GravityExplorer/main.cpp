@@ -54,7 +54,7 @@ void InitObjects()
 {
    planets.clear();
    satellites.clear();
-   //particles.clear();
+   particles.clear();
 
    // earth
    const TVector earth_pos = TVector(0, 0, 0);
@@ -85,9 +85,6 @@ void OnKeyPressed(GLFWwindow* window, int i_key, int scancode, int i_action, int
 
    switch (i_key)
    {
-   case GLFW_KEY_E:
-	   particlesCreatePending = true;
-	   break;
    case GLFW_KEY_SPACE:
       g_is_spin_mode = !g_is_spin_mode;
       break;
@@ -215,6 +212,16 @@ void UpdateState(std::vector<Marker> &markers)
    time_interval *= g_animate_increment;
    g_last_time = time;
 
+   if (g_is_pending_reset)
+   {
+		g_time_until_reset -= time_interval;
+		if (g_time_until_reset <= 0)
+		{
+			InitObjects();
+			g_is_pending_reset = false;
+		}
+   }
+
    if (!markers.empty())
    {
       //////////////////////////////////////////////////////////////////////////
@@ -273,46 +280,51 @@ void UpdateState(std::vector<Marker> &markers)
    if (!g_is_spin_mode)
       return; // nothing to update
 
-   for (uint si = 0; si < satellites.size(); ++si)
+   if (!g_is_pending_reset)
    {
-      TVector acceleration_vec(0, 0, 0);
-      for (uint pi = 0; pi < planets.size(); ++pi)
-      {
-         if ( !planets[pi].m_is_on_scene)
-            continue;
+	   for (uint si = 0; si < satellites.size(); ++si)
+	   {
+		   TVector acceleration_vec(0, 0, 0);
+		   for (uint pi = 0; pi < planets.size(); ++pi)
+		   {
+			   if ( !planets[pi].m_is_on_scene)
+				   continue;
 
-         TVector distance_vec_sat_planet = GetPointInAnotherCoorSys(TVector(0, 0, 0), planets[pi].m_resultMatrix, satellites[si].m_resultMatrix); // point is dist because planet is in zero
-         distance_vec_sat_planet -= satellites[si].m_pos;
+			   TVector distance_vec_sat_planet = GetPointInAnotherCoorSys(TVector(0, 0, 0), planets[pi].m_resultMatrix, satellites[si].m_resultMatrix); // point is dist because planet is in zero
+			   distance_vec_sat_planet -= satellites[si].m_pos;
 
-         distance_vec_draw = distance_vec_sat_planet; // only for debug
+			   distance_vec_draw = distance_vec_sat_planet; // only for debug
 
-         const double dist_sat_planet = distance_vec_sat_planet.length();
+			   const double dist_sat_planet = distance_vec_sat_planet.length();
 
-		 // Check for collision between sat and planet
-		 if (dist_sat_planet < 0.03 * planets[pi].m_radius_scale)
-		 {
-			 // Create explosion particle effect
-			 TVector collision_point = GetPointInAnotherCoorSys(satellites[si].m_pos, satellites[si].m_resultMatrix, planets[pi].m_resultMatrix);
-			 float pos[3] = {collision_point.X(), collision_point.Y(), collision_point.Z()};
-			 AddParticles(pos, 200, PARTICLE_FLYING, 0.2);
-			 AddParticles(pos, 100, PARTICLE_STRETCHING, 0.1);
+			   // Check for collision between sat and planet
+			   if (dist_sat_planet < 0.03 * planets[pi].m_radius_scale + 0.005)
+			   {
+				   // Create explosion particle effect
+				   float pos[3] = {-satellites[si].m_velocity.X() * time_interval, -satellites[si].m_velocity.Y() * time_interval, -satellites[si].m_velocity.Z() * time_interval};
+				   AddParticles(pos, 200, PARTICLE_FLYING, 0.2);
+				   AddParticles(pos, 100, PARTICLE_STRETCHING, 0.1);
 
-			 InitObjects();
-		 }
+				   // Schedule reset
+				   g_is_pending_reset = true;
+				   g_time_until_reset = g_reset_timeout;
+			   }
 
-         const TVector gravity_direction = distance_vec_sat_planet.normalize();
+			   const TVector gravity_direction = distance_vec_sat_planet.normalize();
 
-         // ma = M*m*G/r^2
-         const double acceleration_scal = G * planets[pi].m_mass / (dist_sat_planet * dist_sat_planet);
+			   // ma = M*m*G/r^2
+			   const double acceleration_scal = G * planets[pi].m_mass / (dist_sat_planet * dist_sat_planet);
 
-         acceleration_vec += gravity_direction * acceleration_scal;
-      }
+			   acceleration_vec += gravity_direction * acceleration_scal;
+		   }
 
-      satellites[si].m_acceleration_vec = acceleration_vec;
-      // calculate position of moon according to its velocity and position of earth
-      satellites[si].m_velocity += acceleration_vec * time_interval;
-      satellites[si].m_pos += satellites[si].m_velocity * time_interval;
+		   satellites[si].m_acceleration_vec = acceleration_vec;
+		   // calculate position of moon according to its velocity and position of earth
+		   satellites[si].m_velocity += acceleration_vec * time_interval;
+		   satellites[si].m_pos += satellites[si].m_velocity * time_interval;
+	   }
    }
+   
    // needed for rotation of planet around its axis
    g_hour_of_day += g_animate_increment;
    g_hour_of_day = g_hour_of_day - ((int)(g_hour_of_day/g_num_hours_in_day))*g_num_hours_in_day;
@@ -569,10 +581,6 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr)
    }
 
    //////////////////////////////////////////////////////////////////////////
-   // draw particles
-   DrawParticles();
-
-   //////////////////////////////////////////////////////////////////////////
    // draw satellites
    for (uint i = 0; i < satellites.size(); ++i)
    {
@@ -589,24 +597,31 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr)
 
       glTranslatef(satellites[i].m_pos.X(), satellites[i].m_pos.Y(), satellites[i].m_pos.Z());
 
-      DrawSatellite(i);
+	  if (!g_is_pending_reset)
+	  {
+		  DrawSatellite(i);
 
-      // draw vec betw planet and sat
-         //glBegin(GL_LINES);
-         //glVertex3f(0, 0, 0);
-         //glVertex3f(distance_vec_draw.X(), distance_vec_draw.Y(), distance_vec_draw.Z());
-         //glEnd();
+		  // draw vec betw planet and sat
+		  //glBegin(GL_LINES);
+		  //glVertex3f(0, 0, 0);
+		  //glVertex3f(distance_vec_draw.X(), distance_vec_draw.Y(), distance_vec_draw.Z());
+		  //glEnd();
 
-      // Draw velo and acc vectors
-      const double scale_for_velo_draw = 2;
-      const TVector velo_arrow_vec = satellites[i].m_velocity * scale_for_velo_draw;
-      glColor3f(0, 0, 1);
-      DrawArrow(0, 0, 0, velo_arrow_vec.X(), velo_arrow_vec.Y(), velo_arrow_vec.Z(), 0.001);
+		  // Draw velo and acc vectors
+		  const double scale_for_velo_draw = 2;
+		  const TVector velo_arrow_vec = satellites[i].m_velocity * scale_for_velo_draw;
+		  glColor3f(0, 0, 1);
+		  DrawArrow(0, 0, 0, velo_arrow_vec.X(), velo_arrow_vec.Y(), velo_arrow_vec.Z(), 0.001);
 
-      const double scale_for_acc_draw = 4;
-      const TVector acc_arrow_vec = satellites[i].m_acceleration_vec * scale_for_acc_draw;
-      glColor3f(1, 0, 0);
-      DrawArrow(0, 0, 0, acc_arrow_vec.X(), acc_arrow_vec.Y(), acc_arrow_vec.Z(), 0.001);
+		  const double scale_for_acc_draw = 4;
+		  const TVector acc_arrow_vec = satellites[i].m_acceleration_vec * scale_for_acc_draw;
+		  glColor3f(1, 0, 0);
+		  DrawArrow(0, 0, 0, acc_arrow_vec.X(), acc_arrow_vec.Y(), acc_arrow_vec.Z(), 0.001);
+	  }
+
+	  //////////////////////////////////////////////////////////////////////////
+	  // draw particles
+	  DrawParticles();
 
    }
 }

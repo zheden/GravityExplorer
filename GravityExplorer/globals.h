@@ -20,6 +20,9 @@ double g_hour_of_day = 0.0;
 double g_num_hours_in_day = 1000.0; // to make slower rotatoin of planet
 double g_animate_increment = 1;  // Time step for animation (hours)
 double g_last_time = 0;
+bool g_is_pending_reset = false;
+double g_reset_timeout = 5.0;
+double g_time_until_reset;
 
 TVector distance_vec_draw; // temp for debug
 
