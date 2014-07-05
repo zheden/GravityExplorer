@@ -217,7 +217,10 @@ void UpdateState(std::vector<Marker> &markers)
 		g_time_until_reset -= time_interval;
 		if (g_time_until_reset <= 0)
 		{
+			g_initialization_done = false;
 			InitObjects();
+			g_is_spin_mode = false;
+
 			g_is_pending_reset = false;
 		}
    }
@@ -285,6 +288,8 @@ void UpdateState(std::vector<Marker> &markers)
 	   for (uint si = 0; si < satellites.size(); ++si)
 	   {
 		   TVector acceleration_vec(0, 0, 0);
+		   bool found_close_planet = false;
+
 		   for (uint pi = 0; pi < planets.size(); ++pi)
 		   {
 			   if ( !planets[pi].m_is_on_scene)
@@ -310,6 +315,12 @@ void UpdateState(std::vector<Marker> &markers)
 				   g_time_until_reset = g_reset_timeout;
 			   }
 
+			   // Check if the planet is close (to reset if the satellite is far from all planets)
+			   if (dist_sat_planet < 0.3)
+			   {
+				   found_close_planet = true;
+			   }
+
 			   const TVector gravity_direction = distance_vec_sat_planet.normalize();
 
 			   // ma = M*m*G/r^2
@@ -322,6 +333,14 @@ void UpdateState(std::vector<Marker> &markers)
 		   // calculate position of moon according to its velocity and position of earth
 		   satellites[si].m_velocity += acceleration_vec * time_interval;
 		   satellites[si].m_pos += satellites[si].m_velocity * time_interval;
+
+		   // Reset if the satellite is too far from all planets
+		   if (!found_close_planet)
+		   {
+			   // Schedule reset
+			   g_is_pending_reset = true;
+			   g_time_until_reset = g_reset_timeout;
+		   }
 	   }
    }
    
