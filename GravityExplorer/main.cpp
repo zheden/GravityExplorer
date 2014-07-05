@@ -3,6 +3,7 @@
 #define _USE_MATH_DEFINES
 
 #include <windows.h>
+#include <GL/glew.h>
 #include <glfw3.h>
 #include <GL/glut.h>
 
@@ -342,7 +343,10 @@ void InitGL(int argc, char *argv[])
    // pixel storage/packing stuff
    glPixelStorei( GL_PACK_ALIGNMENT,   1 ); // for glReadPixels​
    glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ); // for glTexImage2D​
-   glPixelZoom( 1.0, -1.0 );
+
+   const GLfloat scale_width = ((GLfloat)g_initial_window_width) / g_camera_width;
+   const GLfloat scale_height = ((GLfloat)g_initial_window_height) / g_camera_height;
+   glPixelZoom(scale_width, -scale_height);
 
    glShadeModel(GL_SMOOTH);
    glDisable(GL_CULL_FACE);
@@ -370,7 +374,11 @@ void InitGL(int argc, char *argv[])
 }
 
 //////////////////////////////////////////////////////////////////////////
-void Reshape( GLFWwindow* window, int width, int height ) {
+void Reshape( GLFWwindow* window, int width, int height )
+{
+   const GLfloat scale_width = ((GLfloat)width) / g_camera_width;
+   const GLfloat scale_height = ((GLfloat)height) / g_camera_height;
+   glPixelZoom(scale_width, -scale_height);
 
    // set a whole-window viewport
    glViewport( 0, 0, (GLsizei)width, (GLsizei)height );
@@ -613,7 +621,7 @@ int main(int argc, char* argv[])
 
    // initialize the window system
    /* Create a windowed mode window and its OpenGL context */
-   window = glfwCreateWindow(g_camera_width, g_camera_height, "Gravity Explorer", NULL, NULL);
+   window = glfwCreateWindow(g_initial_window_width, g_initial_window_height, "Gravity Explorer", NULL, NULL);
    if (!window)
    {
       glfwTerminate();

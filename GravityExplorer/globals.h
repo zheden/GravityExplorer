@@ -9,6 +9,9 @@ cv::VideoCapture cap;
 //camera settings
 const int g_camera_width  = 640;
 const int g_camera_height = 480;
+
+const int g_initial_window_width  = 1.4 * g_camera_width;
+const int g_initial_window_height = 1.4 * g_camera_height;
 const int g_virtual_camera_angle = 60;
 unsigned char bkgnd[g_camera_width*g_camera_height*3];
 
