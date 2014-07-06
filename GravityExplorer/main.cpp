@@ -601,6 +601,23 @@ void DrawArrow(GLdouble x1,GLdouble y1,GLdouble z1,GLdouble x2,GLdouble y2,GLdou
    glPopMatrix();
    }
 
+void DisplatText(const std::string& i_str)
+{
+   glPushMatrix();
+   glLoadIdentity();
+   gluOrtho2D( -700, g_camera_width*4, -g_camera_height + 50, g_camera_height*4 );
+
+   glColor3f(1, 0, 0);
+   glutStrokeWidth(GLUT_STROKE_ROMAN, 120);
+
+   for (auto c = i_str.begin(); c != i_str.end(); ++c)
+   {
+      glutStrokeCharacter(GLUT_STROKE_ROMAN, *c);
+   }
+   glPopMatrix();
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 void Display( GLFWwindow* window, const cv::Mat &img_bgr) 
 {
@@ -611,6 +628,7 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr)
    // move to origin
    glMatrixMode(GL_MODELVIEW);
    glLoadIdentity();
+
 
    // draw background image
    glDisable( GL_DEPTH_TEST );
@@ -625,14 +643,19 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr)
 
    glPopMatrix();
 
+   //////////////////////////////////////////////////////////////////////////
+   if (!g_sat_pos_is_calculated)
+   {
+      DisplatText("Place satellite and Earth marker");
+      return; // to init program we need to have satel and planet 0
+   }
+
+   if (!g_initialization_is_done)
+      DisplatText("Press Spacebar when ready");
+
+
    glEnable(GL_DEPTH_TEST);
    glMatrixMode( GL_MODELVIEW );
-   
-   //////////////////////////////////////////////////////////////////////////
-
-   if (!g_sat_pos_is_calculated)
-      return; // to init program we need to have satel and planet 0 
-
    //////////////////////////////////////////////////////////////////////////
    // draw planets
    for (uint i = 0; i < planets.size(); ++i)
