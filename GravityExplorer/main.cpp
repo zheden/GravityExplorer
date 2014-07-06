@@ -75,6 +75,16 @@ void InitObjects()
    g_last_time = glfwGetTime();
 }
 
+//////////////////////////////////////////////////////////////////////////
+void Reset()
+{
+   g_sat_pos_is_calculated = false;
+   InitObjects();
+   g_is_spin_mode = false;
+   g_animate_increment = 2;
+
+   g_is_pending_reset = false;
+}
 
 //////////////////////////////////////////////////////////////////////////
 void OnKeyPressed(GLFWwindow* window, int i_key, int scancode, int i_action, int mods)
@@ -88,6 +98,7 @@ void OnKeyPressed(GLFWwindow* window, int i_key, int scancode, int i_action, int
    {
    case GLFW_KEY_SPACE:
       g_is_spin_mode = !g_is_spin_mode;
+      g_initialization_is_done = true;
       break;
    case GLFW_KEY_UP:
       if (glfwGetKey(window, GLFW_KEY_M))
@@ -127,7 +138,8 @@ void OnKeyPressed(GLFWwindow* window, int i_key, int scancode, int i_action, int
          rotateAroundZaxis(0.25);
          break;
       }
-      g_animate_increment *= 2.0;
+      if (g_animate_increment < 8)
+         g_animate_increment *= 2.0;
       break;
    case GLFW_KEY_DOWN:
       if (glfwGetKey(window, GLFW_KEY_M))
@@ -169,9 +181,8 @@ void OnKeyPressed(GLFWwindow* window, int i_key, int scancode, int i_action, int
       g_animate_increment /= 2.0;
       break;
    case GLFW_KEY_R:
-      InitObjects();
-      g_animate_increment = 2;
-      g_initialization_done = false;
+      Reset();
+      g_initialization_is_done = false;
       break;
    case GLFW_KEY_ESCAPE:
       exit(1);
@@ -205,26 +216,29 @@ TVector GetPointInAnotherCoorSys(const TVector& i_point_from, float i_mat_from[1
    return TVector(x, y, z);
 }
 
+
 //////////////////////////////////////////////////////////////////////////
 void UpdateState(std::vector<Marker> &markers)
 {
-   double time = glfwGetTime();
-   double time_interval = time - g_last_time;
-   time_interval *= g_animate_increment;
+   const double time = glfwGetTime();
+   double delta_time = time - g_last_time;
+   delta_time *= g_animate_increment;
    g_last_time = time;
+
+   if (!g_initialization_is_done)
+      Reset();
 
    if (g_is_pending_reset)
    {
-		g_time_until_reset -= time_interval;
-		if (g_time_until_reset <= 0)
-		{
-			g_initialization_done = false;
-			InitObjects();
-			g_is_spin_mode = false;
-
-			g_is_pending_reset = false;
-		}
+      g_time_until_reset -= delta_time;
+      if (g_time_until_reset <= 0)
+      {
+         Reset();
+         g_initialization_is_done = false; 
+      }
    }
+
+   const double fixed_time_step = 0.07 * g_animate_increment;
 
    if (!markers.empty())
    {
@@ -263,7 +277,7 @@ void UpdateState(std::vector<Marker> &markers)
       }
    }
 
-   if (!g_initialization_done)
+   if (!g_sat_pos_is_calculated)
    {
       if (!planets[0].m_is_on_scene || !satellites[0].m_is_on_scene)
          return;
@@ -278,7 +292,7 @@ void UpdateState(std::vector<Marker> &markers)
       //TVector velo_sat = GetPointInAnotherCoorSys(TVector(0, -1, 0), planets[0].m_resultMatrix, satellites[0].m_resultMatrix);
       //satellites[0].m_velocity = velo_sat * satellites[0].m_velocity.length();
 
-      g_initialization_done = true;
+      g_sat_pos_is_calculated = true;
    }
 
    if (!g_is_spin_mode)
@@ -289,7 +303,7 @@ void UpdateState(std::vector<Marker> &markers)
 	   for (uint si = 0; si < satellites.size(); ++si)
 	   {
 		   TVector acceleration_vec(0, 0, 0);
-		   bool found_close_planet = false;
+		   bool found_close_planet = true;
 
 		   for (uint pi = 0; pi < planets.size(); ++pi)
 		   {
@@ -307,7 +321,7 @@ void UpdateState(std::vector<Marker> &markers)
 			   if (dist_sat_planet < 0.03 * planets[pi].m_radius_scale + 0.005)
 			   {
 				   // Create explosion particle effect
-				   float pos[3] = {-satellites[si].m_velocity.X() * time_interval, -satellites[si].m_velocity.Y() * time_interval, -satellites[si].m_velocity.Z() * time_interval};
+				   float pos[3] = {-satellites[si].m_velocity.X() * fixed_time_step, -satellites[si].m_velocity.Y() * fixed_time_step, -satellites[si].m_velocity.Z() * fixed_time_step};
 				   AddParticles(pos, 200, PARTICLE_FLYING, 0.2);
 				   AddParticles(pos, 100, PARTICLE_STRETCHING, 0.1);
 
@@ -317,9 +331,9 @@ void UpdateState(std::vector<Marker> &markers)
 			   }
 
 			   // Check if the planet is close (to reset if the satellite is far from all planets)
-			   if (dist_sat_planet < 0.3)
+			   if (dist_sat_planet >= 0.3)
 			   {
-				   found_close_planet = true;
+				   found_close_planet = false;
 			   }
 
 			   const TVector gravity_direction = distance_vec_sat_planet.normalize();
@@ -332,13 +346,13 @@ void UpdateState(std::vector<Marker> &markers)
 
 		   satellites[si].m_acceleration_vec = acceleration_vec;
 		   // calculate position of moon according to its velocity and position of earth
-      satellites[si].m_velocity += acceleration_vec * time_interval;
+      satellites[si].m_velocity += acceleration_vec * fixed_time_step;
 
       if (satellites[si].m_tail.empty() || satellites[si].m_tail.front().dist(satellites[si].m_pos) > 0.001)
          satellites[si].m_tail.push_front(satellites[si].m_pos); // push old pos
       while (satellites[si].m_tail.size() > 50)
          satellites[si].m_tail.pop_back();
-      satellites[si].m_pos += satellites[si].m_velocity * time_interval;
+      satellites[si].m_pos += satellites[si].m_velocity * fixed_time_step;
 
 		   // Reset if the satellite is too far from all planets
 		   if (!found_close_planet)
@@ -354,7 +368,7 @@ void UpdateState(std::vector<Marker> &markers)
    g_hour_of_day += g_animate_increment;
    g_hour_of_day = g_hour_of_day - ((int)(g_hour_of_day/g_num_hours_in_day))*g_num_hours_in_day;
 
-   updateParticles(time_interval);
+   updateParticles(fixed_time_step);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -616,7 +630,7 @@ void Display( GLFWwindow* window, const cv::Mat &img_bgr)
    
    //////////////////////////////////////////////////////////////////////////
 
-   if (!g_initialization_done)
+   if (!g_sat_pos_is_calculated)
       return; // to init program we need to have satel and planet 0 
 
    //////////////////////////////////////////////////////////////////////////

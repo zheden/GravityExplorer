@@ -36,4 +36,5 @@ GLuint g_textureId0 = 0;
 GLuint g_textureId1 = 0;
 GLuint g_textureId_ast = 0;
 
-bool g_initialization_done = false;
+bool g_sat_pos_is_calculated = false; // to position sat near planet
+bool g_initialization_is_done = false; // becomes true after user presses space
