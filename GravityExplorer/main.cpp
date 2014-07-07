@@ -216,6 +216,21 @@ TVector GetPointInAnotherCoorSys(const TVector& i_point_from, float i_mat_from[1
    return TVector(x, y, z);
 }
 
+void CopyMatrixLerp(float from[16], float to[16], float damping)
+{
+	for(int j=0; j<16; j++)
+	{
+		// If the difference is too big we don't interpolate
+		if (abs(from[j] - to[j]) > 1000.0)
+		{
+			to[j] = from[j];
+		}
+		else
+		{
+			to[j] += (from[j] - to[j]) * damping;
+		}
+	}
+}
 
 //////////////////////////////////////////////////////////////////////////
 void UpdateState(std::vector<Marker> &markers)
@@ -258,8 +273,7 @@ void UpdateState(std::vector<Marker> &markers)
             if(code == planets[k].m_code)
             {
                planets[k].m_is_on_scene = true;
-               for(int j=0; j<16; j++)
-                  planets[k].m_resultMatrix[j] = markers[i].resultMatrix[j];
+			   CopyMatrixLerp(markers[i].resultMatrix, planets[k].m_resultMatrix, 0.9);
                marker_i_found = true;
             }
          }
@@ -268,9 +282,8 @@ void UpdateState(std::vector<Marker> &markers)
          {
             if(code == satellites[k].m_code)
             {
-               satellites[k].m_is_on_scene = true;
-               for(int j=0; j<16; j++)
-                  satellites[k].m_resultMatrix[j] = markers[i].resultMatrix[j];
+			   satellites[k].m_is_on_scene = true;
+			   CopyMatrixLerp(markers[i].resultMatrix, satellites[k].m_resultMatrix, 0.75);
                marker_i_found = true;
             }
          }
