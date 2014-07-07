@@ -34,6 +34,7 @@ std::vector<StaticPlanet> planets;
 GLUquadricObj * gp_quadratic; // storage for quadric objects
 GLuint g_textureId0 = 0;
 GLuint g_textureId1 = 0;
+GLuint g_textureId2 = 0;
 GLuint g_textureId_ast = 0;
 
 bool g_sat_pos_is_calculated = false; // to position sat near planet

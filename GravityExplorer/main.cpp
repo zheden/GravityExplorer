@@ -33,6 +33,10 @@ void InitTextures()
    g_textureId1 = loadTextureFromImage(img1);
    delete img1;
 
+   Image* img2 = loadBMP("graphics//planet4.bmp");
+   g_textureId2 = loadTextureFromImage(img2);
+   delete img2;
+
    Image* img_ast = loadBMP("graphics//asteroid.bmp");
    g_textureId_ast = loadTextureFromImage(img_ast);
    delete img_ast;
@@ -66,6 +70,10 @@ void InitObjects()
    const TVector saturn_pos = TVector(0, 0, 0);
    StaticPlanet saturn(saturn_pos, 45, g_textureId1, 0x0b44);
    planets.push_back(saturn);
+
+   StaticPlanet black_planet(TVector(0, 0, 0), 70, g_textureId2, 0x0690);
+   black_planet.m_radius_scale = 1.3;
+   planets.push_back(black_planet);
 
    const TVector satell_velo = TVector(-0.02, 0, 0);
    const TVector satell_pos = TVector(0, 0, 0);
